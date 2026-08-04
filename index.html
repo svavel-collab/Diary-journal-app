@@ -1,0 +1,93 @@
+<!DOCTYPE html>
+<html lang="sv">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Digital Journal</title>
+    <link rel="stylesheet" href="style.css">
+</head>
+<body>
+
+<div class="app-container">
+    <header>
+        <h1 id="view-title">Journal</h1>
+        <div class="header-actions">
+            <button type="button" id="home-btn" class="icon-btn" title="Journal">📖</button>
+            <button type="button" id="calendar-btn" class="icon-btn" title="Planering">📅</button>
+            <button type="button" id="new-post-trigger" class="fab-btn">+</button>
+            <button type="button" id="new-plan-trigger" class="fab-btn hidden">+</button>
+        </div>
+    </header>
+
+    <main>
+        <!-- JOURNAL VYN -->
+        <div id="journal-view">
+            <div id="filter-tags-container" class="filter-container"></div>
+
+            <section class="card hidden" id="form-section">
+                <form id="journal-form">
+                    <input type="hidden" id="post-id">
+                    <input id="post-title" type="text" placeholder="Rubrik..." required>
+                    <input id="post-date" type="date" required>
+                    <input id="post-category" type="text" placeholder="Kategori">
+                    <input id="post-tags" type="text" placeholder="Taggar (kommaseparerade)">
+                    <textarea id="post-content" placeholder="Skriv dina tankar..." rows="4" required></textarea>
+                    
+                    <label style="font-size: 0.9rem; opacity: 0.8; display: block; margin-bottom: 5px;">Bilder (max 6)</label>
+                    <input type="file" id="post-images" accept="image/*" multiple>
+                    <div id="image-preview-container" class="preview-grid"></div>
+
+                    <div class="form-actions">
+                        <button type="submit" class="btn-primary">Spara inlägg</button>
+                        <button type="button" id="cancel-btn">Avbryt</button>
+                    </div>
+                </form>
+            </section>
+
+            <div id="posts-container" style="margin-top: 15px;"></div>
+        </div>
+
+        <!-- PLANERINGS VYN -->
+        <div id="plan-view" class="hidden">
+            <section class="card hidden" id="plan-form-section">
+                <form id="plan-form">
+                    <input type="hidden" id="plan-id">
+                    <input id="plan-date" type="date" required>
+                    <input id="plan-time" type="time" required>
+                    <input id="plan-title" type="text" placeholder="Händelse..." required>
+                    <input id="plan-extra" type="text" placeholder="Adress eller namn etc...">
+                    
+                    <div class="form-actions">
+                        <button type="submit" class="btn-primary">Spara händelse</button>
+                        <button type="button" id="plan-cancel-btn">Avbryt</button>
+                    </div>
+                </form>
+            </section>
+
+            <div id="plans-container" style="margin-top: 15px;"></div>
+        </div>
+    </main>
+</div>
+
+<!-- MODAL FÖR INLÄGG -->
+<div id="post-modal" class="hidden" style="position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(5, 5, 7, 0.85); backdrop-filter: blur(10px); -webkit-backdrop-filter: blur(10px); z-index: 1000; overflow-y: auto; padding: 20px; display: flex; justify-content: center; align-items: flex-start;">
+    <div style="width: 100%; max-width: 600px; position: relative; background: #121215; border: 1px solid #27272a; border-radius: 20px; padding: 20px; margin-top: 20px; box-shadow: 0 20px 40px rgba(0,0,0,0.6);">
+        <div style="display: flex; justify-content: space-between; margin-bottom: 20px; border-bottom: 1px solid #27272a; padding-bottom: 12px;">
+            <button type="button" id="delete-modal-btn" style="background: rgba(239, 68, 68, 0.1); border: 1px solid rgba(239, 68, 68, 0.3); color: #fca5a5; padding: 8px 16px; border-radius: 10px; cursor: pointer; font-weight: 500;">Radera</button>
+            <button type="button" id="close-modal" style="background: rgba(255, 255, 255, 0.05); border: 1px solid #27272a; color: #f4f4f5; padding: 8px 16px; border-radius: 10px; cursor: pointer; font-weight: 500;">Stäng</button>
+        </div>
+        <div id="modal-content-container"></div>
+    </div>
+</div>
+
+<!-- LIGHTBOX -->
+<div id="lightbox" class="hidden">
+    <button type="button" id="lightbox-close" class="lightbox-btn">✕</button>
+    <button type="button" id="lightbox-prev" class="lightbox-btn">❮</button>
+    <img id="lightbox-img" src="" alt="Bild">
+    <button type="button" id="lightbox-next" class="lightbox-btn">❯</button>
+</div>
+
+<script src="app.js"></script>
+</body>
+</html>
