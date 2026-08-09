@@ -2,6 +2,8 @@ const POSTS_KEY = 'digital_journal_posts';
 const PLANS_KEY = 'digital_journal_plans';
 
 let posts = JSON.parse(localStorage.getItem(POSTS_KEY)) || [];
+posts.sort((a, b) => new Date(b.date) - new Date(a.date));
+
 let plans = JSON.parse(localStorage.getItem(PLANS_KEY)) || [];
 let currentFilter = 'all';
 let currentImages = [];
@@ -51,7 +53,6 @@ document.addEventListener('DOMContentLoaded', () => {
     renderPlans();
     setupEventListeners();
 
-    // Starta live-uppdatering för nedräkningen varje sekund
     setInterval(() => {
         if (!planView.classList.contains('hidden')) {
             renderPlans();
@@ -190,6 +191,8 @@ function handleSavePost(e) {
     } else {
         posts.unshift(postData);
     }
+
+    posts.sort((a, b) => new Date(b.date) - new Date(a.date));
 
     localStorage.setItem(POSTS_KEY, JSON.stringify(posts));
     formSection.classList.add('hidden');
@@ -384,7 +387,6 @@ function renderPlans() {
         const dayNum = isNaN(dateObj.getDate()) ? plan.date.split('-')[2] : dateObj.getDate();
         const monthStr = isNaN(dateObj.getMonth()) ? '' : dateObj.toLocaleString('sv-SE', { month: 'short' });
 
-        // Beräkna levande nedräkning med sekunder
         let countdownText = '';
         const targetTime = new Date(`${plan.date}T${plan.time}`);
         const now = new Date();
