@@ -56,49 +56,44 @@ document.addEventListener('DOMContentLoaded', () => {
 
         try {
             const textContent = await file.text();
+            
+            // Kontrollera att filen inte är tom
+            if (!textContent || textContent.trim() === '') {
+                alert('Den valda filen är tom.');
+                importFile.value = '';
+                return;
+            }
+
             const imported = JSON.parse(textContent);
             
-            const postsData = imported.digital_journal_posts || imported.posts || imported.journalPosts;
+            // Leta efter data flexibelt
+            const postsData = imported.digital_journal_posts || imported.posts || imported.journalPosts || (Array.isArray(imported) ? imported : null);
             const plansData = imported.digital_journal_plans || imported.plans || imported.journalPlans;
 
-            if (imported && (postsData || plansData)) {
-                if (confirm(`Vill du skriva över befintlig data och importera "${file.name}"?`)) {
-                    
-                    // Spara till localStorage
-                    if (postsData) {
-                        localStorage.setItem('digital_journal_posts', JSON.stringify(postsData));
-                    }
-                    if (plansData) {
-                        localStorage.setItem('digital_journal_plans', JSON.stringify(plansData));
-                    }
-                    
-                    importFile.value = '';
-                    settingsModal.classList.add('hidden');
+            if (confirm(`Vill du skriva över befintlig data och importera "${file.name}"?`)) {
+                
+                // Spara till localStorage
+                localStorage.setItem('digital_journal_posts', JSON.stringify(postsData || []));
+                localStorage.setItem('digital_journal_plans', JSON.stringify(plansData || []));
+                
+                importFile.value = '';
+                settingsModal.classList.add('hidden');
 
-                    // DIREKTUPPDATERING: Uppdatera globolerna i app.js direkt om de finns tillgängliga
-                    if (typeof posts !== 'undefined' && postsData) {
-                        posts = postsData;
-                    }
-                    if (typeof plans !== 'undefined' && plansData) {
-                        plans = plansData;
-                    }
+                // Uppdatera direkt i minnet
+                if (typeof posts !== 'undefined') posts = postsData || [];
+                if (typeof plans !== 'undefined') plans = plansData || [];
 
-                    // Anropa appens egna renderingsfunktioner direkt om de finns
-                    if (typeof renderPosts === 'function') renderPosts();
-                    if (typeof renderPlans === 'function') renderPlans();
+                if (typeof renderPosts === 'function') renderPosts();
+                if (typeof renderPlans === 'function') renderPlans();
 
-                    alert('Importen slutförd!');
-                } else {
-                    importFile.value = '';
-                }
+                alert('Importen slutförd!');
             } else {
-                alert('Ogiltigt filformat.');
                 importFile.value = '';
             }
         } catch (err) {
-            alert('Kunde inte läsa filen. Kontrollera att det är en giltig backup-fil.');
+            alert('Kunde inte läsa filen. Kontrollera att det är en giltig JSON-fil.');
             console.error(err);
-                importFile.value = '';
+            importFile.value = '';
         }
     });
 });
