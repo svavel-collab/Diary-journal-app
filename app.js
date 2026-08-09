@@ -170,7 +170,6 @@ function handleSavePost(e) {
     const id = document.getElementById('post-id').value || 'post_' + Date.now();
     const title = document.getElementById('post-title').value.trim();
     const date = document.getElementById('post-date').value;
-    const category = document.getElementById('post-category').value.trim();
     const tagsInput = document.getElementById('post-tags').value;
     const content = document.getElementById('post-content').value.trim();
 
@@ -180,7 +179,6 @@ function handleSavePost(e) {
         id,
         title,
         date,
-        category,
         tags,
         content,
         images: [...currentImages]
@@ -213,7 +211,6 @@ function renderPosts() {
 
     const filteredPosts = posts.filter(post => {
         if (currentFilter === 'all') return true;
-        if (post.category && post.category.toLowerCase() === currentFilter.toLowerCase()) return true;
         if (post.tags && post.tags.map(t => t.toLowerCase()).includes(currentFilter.toLowerCase())) return true;
         return false;
     });
@@ -242,7 +239,6 @@ function renderPosts() {
                 <h3 style="font-size: 1.05rem; font-weight: 600; color: var(--text-main);">${escapeHtml(post.title)}</h3>
                 <span style="font-size: 0.75rem; color: var(--text-muted);">${post.date}</span>
             </div>
-            ${post.category ? `<span style="font-size: 0.75rem; color: var(--accent-primary); font-weight: 600; text-transform: uppercase; letter-spacing: 0.5px; display: block; margin-bottom: 6px;">${escapeHtml(post.category)}</span>` : ''}
             <p style="font-size: 0.9rem; color: var(--text-muted); line-height: 1.4; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden;">${escapeHtml(post.content)}</p>
             ${imagesHtml}
             <div>${tagsHtml}</div>
@@ -256,7 +252,6 @@ function renderPosts() {
 function renderFilterChips() {
     const tagsSet = new Set();
     posts.forEach(p => {
-        if (p.category) tagsSet.add(p.category.trim());
         if (p.tags) p.tags.forEach(t => tagsSet.add(t.trim()));
     });
 
@@ -305,7 +300,6 @@ function openPostModal(post) {
             <h2 style="font-size: 1.25rem; font-weight: 600; color: var(--text-main);">${escapeHtml(post.title)}</h2>
             <span style="font-size: 0.8rem; color: var(--text-muted);">${post.date}</span>
         </div>
-        ${post.category ? `<span style="font-size: 0.8rem; color: var(--accent-primary); font-weight: 600; text-transform: uppercase; display: block; margin-bottom: 10px;">${escapeHtml(post.category)}</span>` : ''}
         <p style="font-size: 0.95rem; color: var(--text-main); line-height: 1.6; white-space: pre-wrap; margin-top: 10px;">${escapeHtml(post.content)}</p>
         ${imagesHtml}
         ${tagsHtml}
@@ -327,7 +321,6 @@ window.editPost = function(id) {
     document.getElementById('post-id').value = post.id;
     document.getElementById('post-title').value = post.title;
     document.getElementById('post-date').value = post.date;
-    document.getElementById('post-category').value = post.category || '';
     document.getElementById('post-tags').value = post.tags ? post.tags.join(', ') : '';
     document.getElementById('post-content').value = post.content;
 
