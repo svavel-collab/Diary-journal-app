@@ -27,8 +27,8 @@ document.addEventListener('DOMContentLoaded', () => {
     exportBtn.addEventListener('click', () => {
         try {
             const backupData = {
-                posts: JSON.parse(localStorage.getItem('digital_journal_posts')) || [],
-                plans: JSON.parse(localStorage.getItem('digital_journal_plans')) || [],
+                digital_journal_posts: JSON.parse(localStorage.getItem('digital_journal_posts')) || [],
+                digital_journal_plans: JSON.parse(localStorage.getItem('digital_journal_plans')) || [],
                 version: 1,
                 date: new Date().toISOString()
             };
@@ -50,50 +50,55 @@ document.addEventListener('DOMContentLoaded', () => {
     });
 
     // IMPORT
-    importFile.addEventListener('change', (e) => {
+    importFile.addEventListener('change', async (e) => {
         const file = e.target.files[0];
         if (!file) return;
 
-        // Stäng inställningsrutan direkt så den inte ligger kvar i vägen
-        settingsModal.classList.add('hidden');
+        try {
+            const textContent = await file.text();
+            const imported = JSON.parse(textContent);
+            
+            const postsData = imported.digital_journal_posts || imported.posts || imported.journalPosts;
+            const plansData = imported.digital_journal_plans || imported.plans || imported.journalPlans;
 
-        const reader = new FileReader();
-        reader.onload = (uploadEvent) => {
-            try {
-                const imported = JSON.parse(uploadEvent.target.result);
-                
-                const postsData = imported.posts || imported.journalPosts;
-                const plansData = imported.plans || imported.journalPlans;
-
-                if (imported && (postsData || plansData)) {
-                    if (confirm(`Vald fil: "${file.name}". Vill du skriva över befintlig data och importera detta?`)) {
-                        
-                        if (postsData) {
-                            localStorage.setItem('digital_journal_posts', JSON.stringify(postsData));
-                        }
-                        if (plansData) {
-                            localStorage.setItem('digital_journal_plans', JSON.stringify(plansData));
-                        }
-                        
-                        importFile.value = '';
-
-                        // Utför en snygg "reboot" av appen
-                        setTimeout(() => {
-                            window.location.href = window.location.pathname + '?reload=' + new Date().getTime();
-                        }, 100);
-                    } else {
-                        importFile.value = '';
+            if (imported && (postsData || plansData)) {
+                if (confirm(`Vill du skriva över befintlig data och importera "${file.name}"?`)) {
+                    
+                    // Spara till localStorage
+                    if (postsData) {
+                        localStorage.setItem('digital_journal_posts', JSON.stringify(postsData));
                     }
+                    if (plansData) {
+                        localStorage.setItem('digital_journal_plans', JSON.stringify(plansData));
+                    }
+                    
+                    importFile.value = '';
+                    settingsModal.classList.add('hidden');
+
+                    // DIREKTUPPDATERING: Uppdatera globolerna i app.js direkt om de finns tillgängliga
+                    if (typeof posts !== 'undefined' && postsData) {
+                        posts = postsData;
+                    }
+                    if (typeof plans !== 'undefined' && plansData) {
+                        plans = plansData;
+                    }
+
+                    // Anropa appens egna renderingsfunktioner direkt om de finns
+                    if (typeof renderPosts === 'function') renderPosts();
+                    if (typeof renderPlans === 'function') renderPlans();
+
+                    alert('Importen slutförd!');
                 } else {
-                    alert('Ogiltigt filformat.');
                     importFile.value = '';
                 }
-            } catch (err) {
-                alert('Kunde inte läsa filen. Kontrollera att det är en giltig backup-fil.');
-                console.error(err);
+            } else {
+                alert('Ogiltigt filformat.');
                 importFile.value = '';
             }
-        };
-        reader.readAsText(file);
+        } catch (err) {
+            alert('Kunde inte läsa filen. Kontrollera att det är en giltig backup-fil.');
+            console.error(err);
+                importFile.value = '';
+        }
     });
 });
