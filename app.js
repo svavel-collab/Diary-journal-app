@@ -46,10 +46,28 @@ const lightboxNext = document.getElementById('lightbox-next');
 
 document.addEventListener('DOMContentLoaded', () => {
     setDefaultDates();
+    updateHeaderDate();
     renderPosts();
     renderPlans();
     setupEventListeners();
+
+    // Starta live-uppdatering för nedräkningen varje sekund
+    setInterval(() => {
+        if (!planView.classList.contains('hidden')) {
+            renderPlans();
+        }
+    }, 1000);
 });
+
+function updateHeaderDate() {
+    const headerDateSpan = document.getElementById('header-date');
+    if (headerDateSpan) {
+        const d = new Date();
+        const day = d.getDate();
+        const month = d.toLocaleString('sv-SE', { month: 'short' }).replace('.', '');
+        headerDateSpan.textContent = `${day} ${month}`;
+    }
+}
 
 function setDefaultDates() {
     const today = new Date().toISOString().split('T')[0];
@@ -62,7 +80,8 @@ homeBtn.addEventListener('click', () => {
     planView.classList.add('hidden');
     newPostTrigger.classList.remove('hidden');
     newPlanTrigger.classList.add('hidden');
-    viewTitle.textContent = 'Journal';
+    viewTitle.innerHTML = `Journal <span id="header-date" style="font-size: 1rem; font-weight: 500; color: #a78bfa; margin-left: 8px;"></span>`;
+    updateHeaderDate();
 });
 
 calendarBtn.addEventListener('click', () => {
@@ -70,7 +89,8 @@ calendarBtn.addEventListener('click', () => {
     journalView.classList.add('hidden');
     newPlanTrigger.classList.remove('hidden');
     newPostTrigger.classList.add('hidden');
-    viewTitle.textContent = 'Planering';
+    viewTitle.innerHTML = `Planering <span id="header-date" style="font-size: 1rem; font-weight: 500; color: #a78bfa; margin-left: 8px;"></span>`;
+    updateHeaderDate();
 });
 
 function setupEventListeners() {
@@ -371,20 +391,44 @@ function renderPlans() {
         const dayNum = isNaN(dateObj.getDate()) ? plan.date.split('-')[2] : dateObj.getDate();
         const monthStr = isNaN(dateObj.getMonth()) ? '' : dateObj.toLocaleString('sv-SE', { month: 'short' });
 
+        // Beräkna levande nedräkning med sekunder
+        let countdownText = '';
+        const targetTime = new Date(`${plan.date}T${plan.time}`);
+        const now = new Date();
+        const diff = targetTime - now;
+
+        if (diff > 0) {
+            const days = Math.floor(diff / (1000 * 60 * 60 * 24));
+            const hours = Math.floor((diff % (1000 * 60 * 60 * 24)) / (1000 * 60 * 60));
+            const minutes = Math.floor((diff % (1000 * 60 * 60)) / (1000 * 60));
+            const seconds = Math.floor((diff % (1000 * 60)) / 1000);
+            const pad = (n) => String(n).padStart(2, '0');
+
+            if (days > 0) {
+                countdownText = `${days}d ${pad(hours)}:${pad(minutes)}:${pad(seconds)}`;
+            } else {
+                countdownText = `${pad(hours)}:${pad(minutes)}:${pad(seconds)}`;
+            }
+        } else {
+            countdownText = 'Passerat';
+        }
+
         item.innerHTML = `
             <div class="plan-date-box">
                 <div class="plan-date-day">${dayNum}</div>
                 <div class="plan-date-month">${monthStr}</div>
             </div>
             <div class="plan-details">
-                <span class="plan-time">${plan.time}</span>
+                <div>
+                    <span class="plan-time">${plan.time}</span>
+                    ${countdownText ? `<span style="font-size: 0.75rem; color: var(--text-muted); opacity: 0.8; margin-left: 6px;">${countdownText}</span>` : ''}
+                </div>
                 <h3 style="font-size: 1rem; font-weight: 600; color: var(--text-main); margin-bottom: 2px;">${escapeHtml(plan.title)}</h3>
                 ${plan.extra ? `<p style="font-size: 0.85rem; color: var(--text-muted);">${escapeHtml(plan.extra)}</p>` : ''}
             </div>
             <button type="button" class="plan-delete-btn" onclick="event.stopPropagation(); deletePlan('${plan.id}')" title="Radera">✕</button>
         `;
 
-        // Klicka på planeringsobjektet för att redigera
         item.addEventListener('click', () => editPlan(plan.id));
 
         plansContainer.appendChild(item);
@@ -403,7 +447,6 @@ window.editPlan = function(id) {
     document.getElementById('plan-title').value = plan.title;
     document.getElementById('plan-extra').value = plan.extra || '';
 
-    // Scrolla upp till formuläret smidigt
     planFormSection.scrollIntoView({ behavior: 'smooth' });
 };
 
