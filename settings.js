@@ -54,30 +54,43 @@ document.addEventListener('DOMContentLoaded', () => {
         const file = e.target.files[0];
         if (!file) return;
 
+        // Stäng inställningsrutan direkt så den inte ligger kvar i vägen
+        settingsModal.classList.add('hidden');
+
         const reader = new FileReader();
         reader.onload = (uploadEvent) => {
             try {
                 const imported = JSON.parse(uploadEvent.target.result);
                 
-                if (imported && (imported.posts || imported.plans)) {
-                    if (confirm('Detta kommer att skriva över befintliga inlägg och planeringar med datan från filen. Vill du fortsätta?')) {
-                        if (imported.posts) {
-                            localStorage.setItem('digital_journal_posts', JSON.stringify(imported.posts));
+                const postsData = imported.posts || imported.journalPosts;
+                const plansData = imported.plans || imported.journalPlans;
+
+                if (imported && (postsData || plansData)) {
+                    if (confirm(`Vald fil: "${file.name}". Vill du skriva över befintlig data och importera detta?`)) {
+                        
+                        if (postsData) {
+                            localStorage.setItem('digital_journal_posts', JSON.stringify(postsData));
                         }
-                        if (imported.plans) {
-                            localStorage.setItem('digital_journal_plans', JSON.stringify(imported.plans));
+                        if (plansData) {
+                            localStorage.setItem('digital_journal_plans', JSON.stringify(plansData));
                         }
                         
-                        alert('Importen slutfördes!');
-                        window.location.reload();
+                        importFile.value = '';
+
+                        // Utför en snygg "reboot" av appen
+                        setTimeout(() => {
+                            window.location.href = window.location.pathname + '?reload=' + new Date().getTime();
+                        }, 100);
+                    } else {
+                        importFile.value = '';
                     }
                 } else {
                     alert('Ogiltigt filformat.');
+                    importFile.value = '';
                 }
             } catch (err) {
-                alert('Kunde inte läsa filen. Kontrollera att det är en giltig JSON-fil.');
+                alert('Kunde inte läsa filen. Kontrollera att det är en giltig backup-fil.');
                 console.error(err);
-            } finally {
                 importFile.value = '';
             }
         };
