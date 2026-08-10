@@ -1,0 +1,17 @@
+{
+  "short_name": "Journal",
+  "name": "Digital Journal",
+  "icons": [
+    {
+      "src": "data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 512 512'%3E%3Crect width='512' height='512' rx='115' fill='%23121215' stroke='%2327272a' stroke-width='8'/%3E%3Cpath d='M150 140 C150 128.954 158.954 120 170 120 H342 C353.046 120 362 128.954 362 140 V372 C362 383.046 353.046 392 342 392 H170 C158.954 392 150 383.046 150 372 Z' fill='%2318181b' stroke='%233f3f46' stroke-width='6'/%3E%3Cpath d='M150 140 C150 128.954 158.954 120 170 120 H256 V392 H170 C158.954 392 150 383.046 150 372 Z' fill='%23121215'/%3E%3Cline x1='256' y1='120' x2='256' y2='392' stroke='%2327272a' stroke-width='6'/%3E%3Ccircle cx='256' cy='290' r='45' fill='%233b82f6'/%3E%3Cpath d='M256 265 V315 M231 290 H281' stroke='%23ffffff' stroke-width='8' stroke-linecap='round'/%3E%3C/svg%3E",
+      "sizes": "512x512",
+      "type": "image/svg+xml",
+      "purpose": "any maskable"
+    }
+  ],
+  "start_url": "./index.html",
+  "background_color": "#050507",
+  "theme_color": "#121215",
+  "display": "standalone",
+  "orientation": "portrait"
+}

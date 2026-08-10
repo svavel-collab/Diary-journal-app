@@ -1,10 +1,15 @@
+// Dexie.js databasinitiering
+const db = new Dexie("DigitalJournalDB");
+db.version(1).stores({
+    posts: 'id, date, title',
+    plans: 'id, date, time'
+});
+
 const POSTS_KEY = 'digital_journal_posts';
 const PLANS_KEY = 'digital_journal_plans';
 
-let posts = JSON.parse(localStorage.getItem(POSTS_KEY)) || [];
-posts.sort((a, b) => new Date(b.date) - new Date(a.date));
-
-let plans = JSON.parse(localStorage.getItem(PLANS_KEY)) || [];
+let posts = [];
+let plans = [];
 let currentFilter = 'all';
 let currentImages = [];
 let currentModalPostId = null;
@@ -46,11 +51,10 @@ const lightboxClose = document.getElementById('lightbox-close');
 const lightboxPrev = document.getElementById('lightbox-prev');
 const lightboxNext = document.getElementById('lightbox-next');
 
-document.addEventListener('DOMContentLoaded', () => {
+document.addEventListener('DOMContentLoaded', async () => {
     setDefaultDates();
     updateHeaderDate();
-    renderPosts();
-    renderPlans();
+    await loadInitialData();
     setupEventListeners();
 
     setInterval(() => {
@@ -59,6 +63,47 @@ document.addEventListener('DOMContentLoaded', () => {
         }
     }, 1000);
 });
+
+// Hjälpfunktion för konsekvent sortering (nyast först)
+function sortPostsDescending(postsArray) {
+    return postsArray.sort((a, b) => {
+        const dateA = new Date(a.date).getTime();
+        const dateB = new Date(b.date).getTime();
+        if (dateA !== dateB) {
+            return dateB - dateA; // Nyaste datumet överst
+        }
+        // Om samma datum, sortera på ID (tidsstämpel) så att senast skapade hamnar överst
+        return String(b.id).localeCompare(String(a.id));
+    });
+}
+
+async function loadInitialData() {
+    try {
+        const oldPosts = JSON.parse(localStorage.getItem(POSTS_KEY)) || [];
+        const oldPlans = JSON.parse(localStorage.getItem(PLANS_KEY)) || [];
+
+        if (oldPosts.length > 0) {
+            await db.posts.bulkPut(oldPosts);
+            localStorage.removeItem(POSTS_KEY);
+        }
+
+        if (oldPlans.length > 0) {
+            await db.plans.bulkPut(oldPlans);
+            localStorage.removeItem(PLANS_KEY);
+        }
+
+        posts = await db.posts.toArray();
+        sortPostsDescending(posts);
+
+        plans = await db.plans.toArray();
+        plans.sort((a, b) => new Date(`${a.date}T${a.time}`) - new Date(`${b.date}T${b.time}`));
+
+        renderPosts();
+        renderPlans();
+    } catch (err) {
+        console.error('Fel vid laddning eller migrering från databas:', err);
+    }
+}
 
 function updateHeaderDate() {
     const headerDateSpan = document.getElementById('header-date');
@@ -166,7 +211,7 @@ window.removePreviewImage = function(index) {
     renderImagePreviews();
 };
 
-function handleSavePost(e) {
+async function handleSavePost(e) {
     e.preventDefault();
     const id = document.getElementById('post-id').value || 'post_' + Date.now();
     const title = document.getElementById('post-title').value.trim();
@@ -185,16 +230,11 @@ function handleSavePost(e) {
         images: [...currentImages]
     };
 
-    const existingIndex = posts.findIndex(p => p.id === id);
-    if (existingIndex > -1) {
-        posts[existingIndex] = postData;
-    } else {
-        posts.unshift(postData);
-    }
+    await db.posts.put(postData);
+    
+    posts = await db.posts.toArray();
+    sortPostsDescending(posts);
 
-    posts.sort((a, b) => new Date(b.date) - new Date(a.date));
-
-    localStorage.setItem(POSTS_KEY, JSON.stringify(posts));
     formSection.classList.add('hidden');
     resetJournalForm();
     renderPosts();
@@ -211,6 +251,9 @@ function resetJournalForm() {
 function renderPosts() {
     postsContainer.innerHTML = '';
     renderFilterChips();
+
+    // Säkerställ sortering igen innan rendering
+    sortPostsDescending(posts);
 
     const filteredPosts = posts.filter(post => {
         if (currentFilter === 'all') return true;
@@ -331,15 +374,16 @@ window.editPost = function(id) {
     renderImagePreviews();
 };
 
-function deletePost(id) {
+async function deletePost(id) {
     if (confirm('Är du säker på att du vill radera inlägget?')) {
-        posts = posts.filter(p => p.id !== id);
-        localStorage.setItem(POSTS_KEY, JSON.stringify(posts));
+        await db.posts.delete(id);
+        posts = await db.posts.toArray();
+        sortPostsDescending(posts);
         renderPosts();
     }
 }
 
-function handleSavePlan(e) {
+async function handleSavePlan(e) {
     e.preventDefault();
     const id = document.getElementById('plan-id').value || 'plan_' + Date.now();
     const date = document.getElementById('plan-date').value;
@@ -349,16 +393,11 @@ function handleSavePlan(e) {
 
     const planData = { id, date, time, title, extra };
 
-    const existingIndex = plans.findIndex(p => p.id === id);
-    if (existingIndex > -1) {
-        plans[existingIndex] = planData;
-    } else {
-        plans.push(planData);
-    }
+    await db.plans.put(planData);
 
+    plans = await db.plans.toArray();
     plans.sort((a, b) => new Date(`${a.date}T${a.time}`) - new Date(`${b.date}T${b.time}`));
 
-    localStorage.setItem(PLANS_KEY, JSON.stringify(plans));
     planFormSection.classList.add('hidden');
     resetPlanForm();
     renderPlans();
@@ -445,10 +484,11 @@ window.editPlan = function(id) {
     planFormSection.scrollIntoView({ behavior: 'smooth' });
 };
 
-window.deletePlan = function(id) {
+window.deletePlan = async function(id) {
     if (confirm('Vill du ta bort denna händelse?')) {
-        plans = plans.filter(p => p.id !== id);
-        localStorage.setItem(PLANS_KEY, JSON.stringify(plans));
+        await db.plans.delete(id);
+        plans = await db.plans.toArray();
+        plans.sort((a, b) => new Date(`${a.date}T${a.time}`) - new Date(`${b.date}T${b.time}`));
         renderPlans();
     }
 };
