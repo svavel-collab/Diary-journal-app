@@ -1,0 +1,179 @@
+<!DOCTYPE html>
+<html lang="sv">
+<head>
+    <meta charset="UTF-8">
+    <title>Generera Ikon.png</title>
+    <style>
+        body {
+            background: #090a0f;
+            color: #e2e8f0;
+            font-family: system-ui, -apple-system, sans-serif;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            min-height: 100vh;
+            margin: 0;
+            gap: 20px;
+        }
+        canvas {
+            border-radius: 115px;
+            box-shadow: 0 20px 50px rgba(0, 0, 0, 0.8), 0 0 40px rgba(56, 189, 248, 0.2);
+            width: 256px;
+            height: 256px;
+        }
+        button {
+            background: linear-gradient(135deg, #0ea5e9, #10b981);
+            color: #0f172a;
+            border: none;
+            padding: 14px 28px;
+            font-size: 1rem;
+            font-weight: 700;
+            border-radius: 12px;
+            cursor: pointer;
+            box-shadow: 0 4px 15px rgba(14, 165, 233, 0.4);
+            transition: transform 0.1s, opacity 0.2s;
+        }
+        button:hover {
+            opacity: 0.95;
+            transform: translateY(-1px);
+        }
+    </style>
+</head>
+<body>
+
+    <canvas id="iconCanvas" width="512" height="512"></canvas>
+    <button id="downloadBtn">Ladda ned ikon.png</button>
+
+<script>
+const canvas = document.getElementById('iconCanvas');
+const ctx = canvas.getContext('2d');
+
+// 1. Mörk grafit/svart bakgrund med mjuk gradient
+const bgGrad = ctx.createLinearGradient(0, 0, 512, 512);
+bgGrad.addColorStop(0, '#0f141c');
+bgGrad.addColorStop(1, '#05070a');
+ctx.fillStyle = bgGrad;
+ctx.fillRect(0, 0, 512, 512);
+
+// Yttre subtil ram
+ctx.strokeStyle = '#1e293b';
+ctx.lineWidth = 12;
+ctx.strokeRect(6, 6, 500, 500);
+
+// 2. Bakgrundsglöd (Kall blå/grön cyan)
+const glowGrad = ctx.createRadialGradient(256, 256, 20, 256, 256, 220);
+glowGrad.addColorStop(0, 'rgba(56, 189, 248, 0.25)');
+glowGrad.addColorStop(0.6, 'rgba(16, 185, 129, 0.1)');
+glowGrad.addColorStop(1, 'rgba(0, 0, 0, 0)');
+ctx.fillStyle = glowGrad;
+ctx.fillRect(0, 0, 512, 512);
+
+// 3. Dagbokens bas / Omslag (Svart/Grå platta)
+ctx.save();
+ctx.shadowColor = 'rgba(0, 0, 0, 0.6)';
+ctx.shadowBlur = 30;
+ctx.shadowOffsetY = 15;
+
+const bookGrad = ctx.createLinearGradient(120, 100, 392, 412);
+bookGrad.addColorStop(0, '#1e293b');
+bookGrad.addColorStop(1, '#0f172a');
+
+ctx.fillStyle = bookGrad;
+ctx.beginPath();
+ctx.roundRect(110, 100, 292, 312, 28);
+ctx.fill();
+ctx.restore();
+
+// Omslagets kontur (Kall grå/blå)
+ctx.strokeStyle = '#334155';
+ctx.lineWidth = 4;
+ctx.beginPath();
+ctx.roundRect(110, 100, 292, 312, 28);
+ctx.stroke();
+
+// 4. Vänster/Höger Sida (Öppen bok-känsla i cyan/grön gradient)
+const pageGradLeft = ctx.createLinearGradient(130, 0, 256, 0);
+pageGradLeft.addColorStop(0, '#0284c7');
+pageGradLeft.addColorStop(1, '#38bdf8');
+
+const pageGradRight = ctx.createLinearGradient(256, 0, 382, 0);
+pageGradRight.addColorStop(0, '#38bdf8');
+pageGradRight.addColorStop(1, '#34d399');
+
+// Vänster sida
+ctx.fillStyle = pageGradLeft;
+ctx.beginPath();
+ctx.moveTo(135, 130);
+ctx.lineTo(246, 130);
+ctx.lineTo(246, 382);
+ctx.lineTo(135, 382);
+ctx.closePath();
+ctx.fill();
+
+// Höger sida
+ctx.fillStyle = pageGradRight;
+ctx.beginPath();
+ctx.moveTo(266, 130);
+ctx.lineTo(377, 130);
+ctx.lineTo(377, 382);
+ctx.lineTo(266, 382);
+ctx.closePath();
+ctx.fill();
+
+// Midja/Rygg (Mörk delare)
+ctx.fillStyle = '#0f172a';
+ctx.fillRect(246, 120, 20, 272);
+
+// 5. Linjer på sidorna (Vita/Subtila)
+ctx.strokeStyle = 'rgba(255, 255, 255, 0.6)';
+ctx.lineWidth = 6;
+ctx.lineCap = 'round';
+
+// Vänster rader
+[170, 220, 270, 320].forEach(y => {
+    ctx.beginPath();
+    ctx.moveTo(160, y);
+    ctx.lineTo(220, y);
+    ctx.stroke();
+});
+
+// Höger rader
+[170, 220, 270, 320].forEach(y => {
+    ctx.beginPath();
+    ctx.moveTo(288, y);
+    ctx.lineTo(352, y);
+    ctx.stroke();
+});
+
+// 6. Penna/Accent-symbol i mitten (Vit/Kall metall)
+ctx.save();
+ctx.shadowColor = 'rgba(56, 189, 248, 0.5)';
+ctx.shadowBlur = 15;
+
+const penGrad = ctx.createLinearGradient(0, 180, 0, 340);
+penGrad.addColorStop(0, '#ffffff');
+penGrad.addColorStop(1, '#94a3b8');
+
+ctx.fillStyle = penGrad;
+ctx.beginPath();
+ctx.moveTo(256, 170);
+ctx.lineTo(266, 190);
+ctx.lineTo(266, 320);
+ctx.lineTo(256, 340);
+ctx.lineTo(246, 320);
+ctx.lineTo(246, 190);
+ctx.closePath();
+ctx.fill();
+ctx.restore();
+
+// Ladda ned-knapp
+document.getElementById('downloadBtn').addEventListener('click', () => {
+    const link = document.createElement('a');
+    link.download = 'ikon.png';
+    link.href = canvas.toDataURL('image/png');
+    link.click();
+});
+</script>
+</body>
+</html>
