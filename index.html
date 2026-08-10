@@ -18,6 +18,8 @@
         <div class="header-actions">
             <button type="button" id="home-btn" class="icon-btn active" title="Journal">📖</button>
             <button type="button" id="calendar-btn" class="icon-btn" title="Planering">📅</button>
+            <!-- 🆕 INSTÄLLNINGSKNAPP -->
+            <button type="button" id="settings-btn" class="icon-btn" title="Inställningar">⚙️</button>
             <button type="button" id="new-post-trigger" class="fab-btn">+</button>
             <button type="button" id="new-plan-trigger" class="fab-btn hidden">+</button>
         </div>
@@ -79,6 +81,7 @@
     </main>
 </div>
 
+<!-- POST MODAL -->
 <div id="post-modal" class="modal-overlay hidden">
     <div class="modal-content">
         <div class="modal-header">
@@ -89,6 +92,27 @@
     </div>
 </div>
 
+<!-- 🆕 SETTINGS MODAL -->
+<div id="settings-modal" class="modal-overlay hidden">
+    <div class="modal-content">
+        <div class="modal-header">
+            <h2 style="font-size:1.2rem;">⚙️ Inställningar</h2>
+            <button type="button" id="close-settings" class="btn-secondary">Stäng</button>
+        </div>
+        <div class="settings-section">
+            <h3>📤 Export</h3>
+            <button type="button" id="export-btn" class="btn-primary full-width">Exportera all data (JSON)</button>
+        </div>
+        <div class="settings-section">
+            <h3>📥 Import</h3>
+            <input type="file" id="import-file" accept=".json" style="margin-bottom:10px;">
+            <button type="button" id="import-btn" class="btn-secondary full-width">Importera från fil</button>
+            <p style="font-size:0.75rem;color:var(--text-muted);margin-top:6px;">* Ersätter ALL nuvarande data. Ta backup först!</p>
+        </div>
+    </div>
+</div>
+
+<!-- LIGHTBOX -->
 <div id="lightbox" class="lightbox hidden">
     <button type="button" id="lightbox-close" class="lightbox-btn">✕</button>
     <button type="button" id="lightbox-prev" class="lightbox-btn">❮</button>

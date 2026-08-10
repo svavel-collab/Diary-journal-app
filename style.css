@@ -175,3 +175,19 @@ button:active { transform: scale(0.97); }
 .toast.error { background: rgba(239,68,68,0.95); }
 
 .hidden { display: none !important; }
+/* ─── SETTINGS MODAL ─── */
+.settings-section {
+    margin-bottom: 28px;
+}
+.settings-section h3 {
+    font-size: 1rem;
+    font-weight: 600;
+    margin-bottom: 12px;
+    color: var(--text-muted);
+    border-bottom: 1px solid var(--border-color);
+    padding-bottom: 6px;
+}
+.full-width {
+    width: 100%;
+    justify-content: center;
+}

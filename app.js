@@ -14,8 +14,6 @@ document.addEventListener('DOMContentLoaded', async () => {
     updateHeaderDate();
     await loadInitialData();
     setupEventListeners();
-
-    // ✅ Uppdaterar endast texten – renderar INTE om planeringen
     setInterval(updateCountdowns, 1000);
 });
 
@@ -57,6 +55,9 @@ document.getElementById('home-btn').onclick = () => {
     document.getElementById('new-plan-trigger').classList.add('hidden');
     document.getElementById('view-title').innerHTML = 'Journal <span id="header-date"></span>';
     updateHeaderDate();
+    // 🆕 Uppdatera aktiva knappar
+    document.getElementById('home-btn').classList.add('active');
+    document.getElementById('calendar-btn').classList.remove('active');
 };
 document.getElementById('calendar-btn').onclick = () => {
     document.getElementById('plan-view').classList.remove('hidden');
@@ -65,7 +66,10 @@ document.getElementById('calendar-btn').onclick = () => {
     document.getElementById('new-post-trigger').classList.add('hidden');
     document.getElementById('view-title').innerHTML = 'Planering <span id="header-date"></span>';
     updateHeaderDate();
-    renderPlans(); // Körs bara vid vybyte
+    renderPlans();
+    // 🆕 Uppdatera aktiva knappar
+    document.getElementById('calendar-btn').classList.add('active');
+    document.getElementById('home-btn').classList.remove('active');
 };
 
 // ========== EVENT LISTENERS ==========
@@ -214,7 +218,7 @@ async function handleSavePlan(e) {
     plans = await db.plans.toArray(); plans.sort((a,b) => new Date(`${a.date}T${a.time}`) - new Date(`${b.date}T${b.time}`));
     document.getElementById('plan-form-section').classList.add('hidden');
     resetPlanForm();
-    renderPlans(); // Omskapar planlistan efter sparande
+    renderPlans();
 }
 function resetPlanForm() { document.getElementById('plan-form').reset(); document.getElementById('plan-id').value = ''; setDefaultDates(); }
 
@@ -266,7 +270,6 @@ window.deletePlan = async id => {
     if (confirm('Radera händelse?')) { await db.plans.delete(id); plans = await db.plans.toArray(); plans.sort((a,b) => new Date(`${a.date}T${a.time}`) - new Date(`${b.date}T${b.time}`)); renderPlans(); }
 };
 
-// ✅ Uppdaterar endast texten i nedräkningarna – rör inte DOM-strukturen
 function updateCountdowns() {
     if (document.getElementById('plan-view').classList.contains('hidden')) return;
     const now = new Date();
@@ -293,3 +296,98 @@ function updateCountdowns() {
 window.openLightbox = (imgs, idx) => { lightboxImages = imgs; lightboxCurrentIndex = idx; updateLightbox(); document.getElementById('lightbox').classList.remove('hidden'); };
 function updateLightbox() { document.getElementById('lightbox-img').src = lightboxImages[lightboxCurrentIndex]; }
 function navigateLightbox(dir) { lightboxCurrentIndex = (lightboxCurrentIndex + dir + lightboxImages.length) % lightboxImages.length; updateLightbox(); }
+
+// ========== EXPORT / IMPORT ==========
+
+function openSettings() {
+    document.getElementById('settings-modal').classList.remove('hidden');
+}
+
+document.getElementById('close-settings').addEventListener('click', function() {
+    document.getElementById('settings-modal').classList.add('hidden');
+});
+
+document.getElementById('settings-modal').addEventListener('click', function(e) {
+    if (e.target === this) this.classList.add('hidden');
+});
+
+// Export – filnamn jour_ååååmmdd.json
+document.getElementById('export-btn').addEventListener('click', async function() {
+    try {
+        const data = {
+            posts: await db.posts.toArray(),
+            plans: await db.plans.toArray(),
+            exportedAt: new Date().toISOString()
+        };
+        const blob = new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' });
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url;
+        const now = new Date();
+        const year = now.getFullYear();
+        const month = String(now.getMonth() + 1).padStart(2, '0');
+        const day = String(now.getDate()).padStart(2, '0');
+        const fileName = `jour_${year}${month}${day}.json`;
+        console.log('📁 Filnamn:', fileName);
+        a.download = fileName;
+        document.body.appendChild(a);
+        a.click();
+        a.remove();
+        URL.revokeObjectURL(url);
+        alert('Export lyckades!');
+    } catch (err) {
+        console.error(err);
+        alert('Export misslyckades.');
+    }
+});
+
+// Import
+document.getElementById('import-btn').addEventListener('click', function() {
+    const fileInput = document.getElementById('import-file');
+    if (!fileInput.files.length) {
+        alert('Välj en JSON-fil först.');
+        return;
+    }
+    const file = fileInput.files[0];
+    if (!file.name.endsWith('.json')) {
+        alert('Filen måste ha .json-ändelse.');
+        return;
+    }
+    if (!confirm('Detta ersätter ALL data. Fortsätta?')) return;
+
+    const reader = new FileReader();
+    reader.onload = async function(e) {
+        try {
+            const data = JSON.parse(e.target.result);
+            if (!data.posts || !data.plans) {
+                throw new Error('Ogiltig fil: saknar posts/plans.');
+            }
+            await db.transaction('rw', db.posts, db.plans, async () => {
+                await db.posts.clear();
+                await db.plans.clear();
+                await db.posts.bulkPut(data.posts);
+                await db.plans.bulkPut(data.plans);
+            });
+            posts = await db.posts.toArray();
+            sortPostsDescending(posts);
+            plans = await db.plans.toArray();
+            plans.sort((a,b) => new Date(`${a.date}T${a.time}`) - new Date(`${b.date}T${b.time}`));
+            renderPosts();
+            renderPlans();
+            fileInput.value = '';
+            alert('Import lyckades!');
+        } catch (err) {
+            console.error(err);
+            alert('Import misslyckades: ' + err.message);
+        }
+    };
+    reader.readAsText(file);
+});
+
+// Koppla settings-knappen
+document.addEventListener('DOMContentLoaded', function() {
+    const settingsBtn = document.getElementById('settings-btn');
+    if (settingsBtn) {
+        settingsBtn.addEventListener('click', openSettings);
+    }
+});
