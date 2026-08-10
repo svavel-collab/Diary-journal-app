@@ -38,25 +38,45 @@ document.getElementById('import-file').addEventListener('change', (e) => {
     if (!file) return;
 
     const reader = new FileReader();
+    
     reader.onload = async (event) => {
         try {
-            const importedData = JSON.parse(event.target.result);
+            // Rensa eventuella osynliga BOM-tecken i början av filen
+            let content = event.target.result;
+            if (content.charCodeAt(0) === 0xFEFF) {
+                content = content.slice(1);
+            }
 
-            if (importedData.posts && Array.isArray(importedData.posts)) {
-                await db.posts.bulkPut(importedData.posts);
+            const importedData = JSON.parse(content);
+
+            if (!importedData.posts && !importedData.plans) {
+                throw new Error("Filen saknar giltig journaldata (posts/plans).");
             }
-            if (importedData.plans && Array.isArray(importedData.plans)) {
-                await db.plans.bulkPut(importedData.plans);
-            }
+
+            // Använd en transaktion för snabb och säker insättning av stor datamängd
+            await db.transaction('rw', db.posts, db.plans, async () => {
+                if (importedData.posts && Array.isArray(importedData.posts)) {
+                    await db.posts.bulkPut(importedData.posts);
+                }
+                if (importedData.plans && Array.isArray(importedData.plans)) {
+                    await db.plans.bulkPut(importedData.plans);
+                }
+            });
 
             alert('Importen lyckades!');
             location.reload();
         } catch (err) {
-            console.error('Fel vid import:', err);
-            alert('Misslyckades att läsa importfilen.');
+            console.error('Detaljerat importfel:', err);
+            alert(`Kunde inte läsa filen: ${err.message}`);
         }
     };
-    reader.readAsText(file);
+
+    reader.onerror = (err) => {
+        console.error('FileReader fel:', err);
+        alert('Kunde inte läsa filen från din enhet.');
+    };
+
+    reader.readAsText(file, 'UTF-8');
 });
 
 // INSTÄLLNINGAR MODAL
