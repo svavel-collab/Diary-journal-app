@@ -1,57 +1,13 @@
-// Dexie.js databasinitiering (Global via window.db)
+// Dexie.js databas
 window.db = new Dexie("DigitalJournalDB");
 const db = window.db;
-
-db.version(1).stores({
-    posts: 'id, date, title',
-    plans: 'id, date, time'
-});
+db.version(1).stores({ posts: 'id, date, title', plans: 'id, date, time' });
 
 const POSTS_KEY = 'digital_journal_posts';
 const PLANS_KEY = 'digital_journal_plans';
 
-let posts = [];
-let plans = [];
-let currentFilter = 'all';
-let currentImages = [];
-let currentModalPostId = null;
-
-let lightboxImages = [];
-let lightboxCurrentIndex = 0;
-
-const homeBtn = document.getElementById('home-btn');
-const calendarBtn = document.getElementById('calendar-btn');
-const viewTitle = document.getElementById('view-title');
-const journalView = document.getElementById('journal-view');
-const planView = document.getElementById('plan-view');
-
-const newPostTrigger = document.getElementById('new-post-trigger');
-const newPlanTrigger = document.getElementById('new-plan-trigger');
-
-const formSection = document.getElementById('form-section');
-const journalForm = document.getElementById('journal-form');
-const cancelBtn = document.getElementById('cancel-btn');
-const postsContainer = document.getElementById('posts-container');
-const filterTagsContainer = document.getElementById('filter-tags-container');
-
-const planFormSection = document.getElementById('plan-form-section');
-const planForm = document.getElementById('plan-form');
-const planCancelBtn = document.getElementById('plan-cancel-btn');
-const plansContainer = document.getElementById('plans-container');
-
-const postModal = document.getElementById('post-modal');
-const closeModal = document.getElementById('close-modal');
-const modalContentContainer = document.getElementById('modal-content-container');
-const deleteModalBtn = document.getElementById('delete-modal-btn');
-
-const postImagesInput = document.getElementById('post-images');
-const imagePreviewContainer = document.getElementById('image-preview-container');
-
-const lightbox = document.getElementById('lightbox');
-const lightboxImg = document.getElementById('lightbox-img');
-const lightboxClose = document.getElementById('lightbox-close');
-const lightboxPrev = document.getElementById('lightbox-prev');
-const lightboxNext = document.getElementById('lightbox-next');
+let posts = [], plans = [], currentFilter = 'all', currentImages = [], currentModalPostId = null;
+let lightboxImages = [], lightboxCurrentIndex = 0;
 
 document.addEventListener('DOMContentLoaded', async () => {
     setDefaultDates();
@@ -59,468 +15,281 @@ document.addEventListener('DOMContentLoaded', async () => {
     await loadInitialData();
     setupEventListeners();
 
-    setInterval(() => {
-        if (!planView.classList.contains('hidden')) {
-            renderPlans();
-        }
-    }, 1000);
+    // ✅ Uppdaterar endast texten – renderar INTE om planeringen
+    setInterval(updateCountdowns, 1000);
 });
 
-// Hjälpfunktion för konsekvent sortering (nyast först)
-function sortPostsDescending(postsArray) {
-    return postsArray.sort((a, b) => {
-        const dateA = new Date(a.date).getTime();
-        const dateB = new Date(b.date).getTime();
-        if (dateA !== dateB) {
-            return dateB - dateA; // Nyaste datumet överst
-        }
-        // Om samma datum, sortera på ID (tidsstämpel) så att senast skapade hamnar överst
-        return String(b.id).localeCompare(String(a.id));
-    });
+function sortPostsDescending(arr) {
+    return arr.sort((a, b) => new Date(b.date) - new Date(a.date) || String(b.id).localeCompare(String(a.id)));
 }
 
 async function loadInitialData() {
     try {
         const oldPosts = JSON.parse(localStorage.getItem(POSTS_KEY)) || [];
         const oldPlans = JSON.parse(localStorage.getItem(PLANS_KEY)) || [];
-
-        if (oldPosts.length > 0) {
-            await db.posts.bulkPut(oldPosts);
-            localStorage.removeItem(POSTS_KEY);
-        }
-
-        if (oldPlans.length > 0) {
-            await db.plans.bulkPut(oldPlans);
-            localStorage.removeItem(PLANS_KEY);
-        }
-
-        posts = await db.posts.toArray();
-        sortPostsDescending(posts);
-
-        plans = await db.plans.toArray();
-        plans.sort((a, b) => new Date(`${a.date}T${a.time}`) - new Date(`${b.date}T${b.time}`));
-
-        renderPosts();
-        renderPlans();
-    } catch (err) {
-        console.error('Fel vid laddning eller migrering från databas:', err);
-    }
+        if (oldPosts.length) { await db.posts.bulkPut(oldPosts); localStorage.removeItem(POSTS_KEY); }
+        if (oldPlans.length) { await db.plans.bulkPut(oldPlans); localStorage.removeItem(PLANS_KEY); }
+        posts = await db.posts.toArray(); sortPostsDescending(posts);
+        plans = await db.plans.toArray(); plans.sort((a,b) => new Date(`${a.date}T${a.time}`) - new Date(`${b.date}T${b.time}`));
+        renderPosts(); renderPlans();
+    } catch (e) { console.error(e); }
 }
 
 function updateHeaderDate() {
-    const headerDateSpan = document.getElementById('header-date');
-    if (headerDateSpan) {
-        const d = new Date();
-        const day = d.getDate();
-        const month = d.toLocaleString('sv-SE', { month: 'short' }).replace('.', '');
-        headerDateSpan.textContent = `${day} ${month}`;
-    }
+    const el = document.getElementById('header-date');
+    if (el) { const d = new Date(); el.textContent = `${d.getDate()} ${d.toLocaleString('sv-SE',{month:'short'}).replace('.','')}`; }
 }
 
 function setDefaultDates() {
     const today = new Date().toISOString().split('T')[0];
     document.getElementById('post-date').value = today;
     document.getElementById('plan-date').value = today;
+    document.getElementById('plan-time').value = '12:00';
 }
 
-homeBtn.addEventListener('click', () => {
-    journalView.classList.remove('hidden');
-    planView.classList.add('hidden');
-    newPostTrigger.classList.remove('hidden');
-    newPlanTrigger.classList.add('hidden');
-    viewTitle.innerHTML = `Journal <span id="header-date" style="font-size: 1rem; font-weight: 500; color: #a78bfa; margin-left: 8px;"></span>`;
+function escapeHtml(s) { return s.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;'); }
+
+// ========== VYER ==========
+document.getElementById('home-btn').onclick = () => {
+    document.getElementById('journal-view').classList.remove('hidden');
+    document.getElementById('plan-view').classList.add('hidden');
+    document.getElementById('new-post-trigger').classList.remove('hidden');
+    document.getElementById('new-plan-trigger').classList.add('hidden');
+    document.getElementById('view-title').innerHTML = 'Journal <span id="header-date"></span>';
     updateHeaderDate();
-});
-
-calendarBtn.addEventListener('click', () => {
-    planView.classList.remove('hidden');
-    journalView.classList.add('hidden');
-    newPlanTrigger.classList.remove('hidden');
-    newPostTrigger.classList.add('hidden');
-    viewTitle.innerHTML = `Planering <span id="header-date" style="font-size: 1rem; font-weight: 500; color: #a78bfa; margin-left: 8px;"></span>`;
+};
+document.getElementById('calendar-btn').onclick = () => {
+    document.getElementById('plan-view').classList.remove('hidden');
+    document.getElementById('journal-view').classList.add('hidden');
+    document.getElementById('new-plan-trigger').classList.remove('hidden');
+    document.getElementById('new-post-trigger').classList.add('hidden');
+    document.getElementById('view-title').innerHTML = 'Planering <span id="header-date"></span>';
     updateHeaderDate();
-});
-
-function setupEventListeners() {
-    newPostTrigger.addEventListener('click', () => {
-        resetJournalForm();
-        formSection.classList.toggle('hidden');
-    });
-    cancelBtn.addEventListener('click', () => formSection.classList.add('hidden'));
-
-    newPlanTrigger.addEventListener('click', () => {
-        resetPlanForm();
-        planFormSection.classList.toggle('hidden');
-    });
-    planCancelBtn.addEventListener('click', () => planFormSection.classList.add('hidden'));
-
-    journalForm.addEventListener('submit', handleSavePost);
-    planForm.addEventListener('submit', handleSavePlan);
-
-    postImagesInput.addEventListener('change', handleImageUpload);
-
-    closeModal.addEventListener('click', () => postModal.classList.add('hidden'));
-    postModal.addEventListener('click', (e) => {
-        if (e.target === postModal) postModal.classList.add('hidden');
-    });
-    deleteModalBtn.addEventListener('click', () => {
-        if (currentModalPostId) {
-            deletePost(currentModalPostId);
-            postModal.classList.add('hidden');
-        }
-    });
-
-    lightboxClose.addEventListener('click', () => lightbox.classList.add('hidden'));
-    lightbox.addEventListener('click', (e) => {
-        if (e.target === lightbox) lightbox.classList.add('hidden');
-    });
-    lightboxPrev.addEventListener('click', () => navigateLightbox(-1));
-    lightboxNext.addEventListener('click', () => navigateLightbox(1));
-}
-
-function handleImageUpload(e) {
-    const files = Array.from(e.target.files);
-    if (currentImages.length + files.length > 6) {
-        alert('Max 6 bilder tillåtna.');
-        return;
-    }
-
-    files.forEach(file => {
-        const reader = new FileReader();
-        reader.onload = (uploadEvent) => {
-            currentImages.push(uploadEvent.target.result);
-            renderImagePreviews();
-        };
-        reader.readAsDataURL(file);
-    });
-}
-
-function renderImagePreviews() {
-    imagePreviewContainer.innerHTML = '';
-    currentImages.forEach((imgSrc, index) => {
-        const wrapper = document.createElement('div');
-        wrapper.style.position = 'relative';
-        wrapper.innerHTML = `
-            <img src="${imgSrc}" alt="Preview">
-            <button type="button" onclick="removePreviewImage(${index})" style="position: absolute; top: -6px; right: -6px; background: #ef4444; color: white; border: none; border-radius: 50%; width: 20px; height: 20px; font-size: 10px; cursor: pointer; display: flex; align-items: center; justify-content: center;">✕</button>
-        `;
-        imagePreviewContainer.appendChild(wrapper);
-    });
-}
-
-window.removePreviewImage = function(index) {
-    currentImages.splice(index, 1);
-    renderImagePreviews();
+    renderPlans(); // Körs bara vid vybyte
 };
 
+// ========== EVENT LISTENERS ==========
+function setupEventListeners() {
+    document.getElementById('new-post-trigger').onclick = () => { resetJournalForm(); document.getElementById('form-section').classList.toggle('hidden'); };
+    document.getElementById('cancel-btn').onclick = () => document.getElementById('form-section').classList.add('hidden');
+    document.getElementById('new-plan-trigger').onclick = () => { resetPlanForm(); document.getElementById('plan-form-section').classList.toggle('hidden'); };
+    document.getElementById('plan-cancel-btn').onclick = () => document.getElementById('plan-form-section').classList.add('hidden');
+    document.getElementById('journal-form').onsubmit = handleSavePost;
+    document.getElementById('plan-form').onsubmit = handleSavePlan;
+    document.getElementById('post-images').onchange = handleImageUpload;
+    document.getElementById('close-modal').onclick = () => document.getElementById('post-modal').classList.add('hidden');
+    document.getElementById('delete-modal-btn').onclick = () => {
+        if (currentModalPostId) { deletePost(currentModalPostId); document.getElementById('post-modal').classList.add('hidden'); }
+    };
+    document.getElementById('lightbox-close').onclick = () => document.getElementById('lightbox').classList.add('hidden');
+    document.getElementById('lightbox-prev').onclick = () => navigateLightbox(-1);
+    document.getElementById('lightbox-next').onclick = () => navigateLightbox(1);
+    document.getElementById('search-input').oninput = function() {
+        document.getElementById('clear-search-btn').classList.toggle('hidden', !this.value);
+        renderPosts();
+    };
+    document.getElementById('clear-search-btn').onclick = () => {
+        document.getElementById('search-input').value = '';
+        document.getElementById('clear-search-btn').classList.add('hidden');
+        renderPosts();
+    };
+}
+
+// ========== BILDER ==========
+function handleImageUpload(e) {
+    const files = Array.from(e.target.files);
+    if (currentImages.length + files.length > 6) { alert('Max 6 bilder'); e.target.value = ''; return; }
+    files.forEach(f => {
+        const r = new FileReader();
+        r.onload = ev => { currentImages.push(ev.target.result); renderImagePreviews(); };
+        r.readAsDataURL(f);
+    });
+    e.target.value = '';
+}
+function renderImagePreviews() {
+    const c = document.getElementById('image-preview-container');
+    c.innerHTML = '';
+    currentImages.forEach((src,i) => {
+        const w = document.createElement('div');
+        w.style.position = 'relative';
+        w.innerHTML = `<img src="${src}" style="width:72px;height:72px;object-fit:cover;border-radius:10px;"><button onclick="removePreviewImage(${i})" style="position:absolute;top:-6px;right:-6px;background:#ef4444;color:white;border:none;border-radius:50%;width:20px;height:20px;font-size:10px;cursor:pointer;">✕</button>`;
+        c.appendChild(w);
+    });
+}
+window.removePreviewImage = i => { currentImages.splice(i,1); renderImagePreviews(); };
+
+// ========== INLÄGG ==========
 async function handleSavePost(e) {
     e.preventDefault();
-    const id = document.getElementById('post-id').value || 'post_' + Date.now();
+    const id = document.getElementById('post-id').value || 'post_'+Date.now();
     const title = document.getElementById('post-title').value.trim();
     const date = document.getElementById('post-date').value;
-    const tagsInput = document.getElementById('post-tags').value;
+    const tags = (document.getElementById('post-tags').value || '').split(',').map(t=>t.trim()).filter(Boolean);
     const content = document.getElementById('post-content').value.trim();
-
-    const tags = tagsInput ? tagsInput.split(',').map(t => t.trim()).filter(t => t.length > 0) : [];
-
-    const postData = {
-        id,
-        title,
-        date,
-        tags,
-        content,
-        images: [...currentImages]
-    };
-
-    await db.posts.put(postData);
-    
-    posts = await db.posts.toArray();
-    sortPostsDescending(posts);
-
-    formSection.classList.add('hidden');
+    if (!title || !date || !content) return alert('Fyll i alla fält');
+    await db.posts.put({ id, title, date, tags, content, images: [...currentImages] });
+    posts = await db.posts.toArray(); sortPostsDescending(posts);
+    document.getElementById('form-section').classList.add('hidden');
     resetJournalForm();
     renderPosts();
 }
-
 function resetJournalForm() {
-    journalForm.reset();
+    document.getElementById('journal-form').reset();
     document.getElementById('post-id').value = '';
     currentImages = [];
-    imagePreviewContainer.innerHTML = '';
+    document.getElementById('image-preview-container').innerHTML = '';
     setDefaultDates();
 }
-
 function renderPosts() {
-    postsContainer.innerHTML = '';
+    const c = document.getElementById('posts-container');
+    c.innerHTML = '';
     renderFilterChips();
-
-    // Säkerställ sortering igen innan rendering
     sortPostsDescending(posts);
-
-    const filteredPosts = posts.filter(post => {
-        if (currentFilter === 'all') return true;
-        if (post.tags && post.tags.map(t => t.toLowerCase()).includes(currentFilter.toLowerCase())) return true;
-        return false;
+    const search = document.getElementById('search-input').value.toLowerCase().trim();
+    const filtered = posts.filter(p => {
+        if (currentFilter !== 'all' && (!p.tags || !p.tags.map(t=>t.toLowerCase()).includes(currentFilter.toLowerCase()))) return false;
+        if (search && !p.title.toLowerCase().includes(search) && !p.content.toLowerCase().includes(search) && (!p.tags || !p.tags.some(t=>t.toLowerCase().includes(search)))) return false;
+        return true;
     });
-
-    if (filteredPosts.length === 0) {
-        postsContainer.innerHTML = `<p style="color: var(--text-muted); text-align: center; padding: 20px;">Inga inlägg hittades.</p>`;
-        return;
-    }
-
-    filteredPosts.forEach(post => {
+    if (!filtered.length) { c.innerHTML = '<p style="text-align:center;color:var(--text-muted);padding:20px;">Inga inlägg</p>'; return; }
+    filtered.forEach(p => {
         const card = document.createElement('div');
         card.className = 'post-card';
-        
-        let tagsHtml = '';
-        if (post.tags && post.tags.length > 0) {
-            tagsHtml = post.tags.map(t => `<span class="post-tag">#${t}</span>`).join('');
-        }
-
-        let imagesHtml = '';
-        if (post.images && post.images.length > 0) {
-            imagesHtml = `<div class="post-images">` + post.images.map(img => `<img src="${img}" alt="Miniatyr">`).join('') + `</div>`;
-        }
-
         card.innerHTML = `
-            <div style="display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 6px;">
-                <h3 style="font-size: 1.05rem; font-weight: 600; color: var(--text-main);">${escapeHtml(post.title)}</h3>
-                <span style="font-size: 0.75rem; color: var(--text-muted);">${post.date}</span>
-            </div>
-            <p style="font-size: 0.9rem; color: var(--text-muted); line-height: 1.4; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden;">${escapeHtml(post.content)}</p>
-            ${imagesHtml}
-            <div>${tagsHtml}</div>
+            <div style="display:flex;justify-content:space-between;"><h3>${escapeHtml(p.title)}</h3><span style="font-size:0.75rem;color:var(--text-muted)">${p.date}</span></div>
+            <p style="display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden;">${escapeHtml(p.content)}</p>
+            ${p.images && p.images.length ? `<div class="post-images">${p.images.map(img => `<img src="${img}">`).join('')}</div>` : ''}
+            <div>${p.tags ? p.tags.map(t => `<span class="post-tag">#${t}</span>`).join('') : ''}</div>
         `;
-
-        card.addEventListener('click', () => openPostModal(post));
-        postsContainer.appendChild(card);
+        card.onclick = () => openPostModal(p);
+        c.appendChild(card);
     });
 }
-
 function renderFilterChips() {
-    const tagsSet = new Set();
-    posts.forEach(p => {
-        if (p.tags) p.tags.forEach(t => tagsSet.add(t.trim()));
-    });
-
-    filterTagsContainer.innerHTML = '';
-    
-    const allChip = document.createElement('button');
-    allChip.type = 'button';
-    allChip.className = `filter-chip ${currentFilter === 'all' ? 'active' : ''}`;
-    allChip.textContent = 'Alla';
-    allChip.addEventListener('click', () => {
-        currentFilter = 'all';
-        renderPosts();
-    });
-    filterTagsContainer.appendChild(allChip);
-
-    tagsSet.forEach(tag => {
-        const chip = document.createElement('button');
-        chip.type = 'button';
-        chip.className = `filter-chip ${currentFilter.toLowerCase() === tag.toLowerCase() ? 'active' : ''}`;
-        chip.textContent = tag;
-        chip.addEventListener('click', () => {
-            currentFilter = tag;
-            renderPosts();
-        });
-        filterTagsContainer.appendChild(chip);
+    const c = document.getElementById('filter-tags-container');
+    c.innerHTML = '';
+    const all = document.createElement('button'); all.className = `filter-chip ${currentFilter==='all'?'active':''}`; all.textContent='Alla'; all.onclick=()=>{currentFilter='all';renderPosts();}; c.appendChild(all);
+    const set = new Set(); posts.forEach(p => p.tags && p.tags.forEach(t => set.add(t.trim())));
+    set.forEach(tag => {
+        const btn = document.createElement('button'); btn.className = `filter-chip ${currentFilter.toLowerCase()===tag.toLowerCase()?'active':''}`; btn.textContent=tag; btn.onclick=()=>{currentFilter=tag;renderPosts();}; c.appendChild(btn);
     });
 }
-
 function openPostModal(post) {
     currentModalPostId = post.id;
-    
-    let imagesHtml = '';
-    if (post.images && post.images.length > 0) {
-        imagesHtml = `<div class="post-images" style="margin-top: 15px;">` + 
-            post.images.map((img, idx) => `<img src="${img}" alt="Bild" style="width: 80px; height: 80px; cursor: pointer;" onclick="openLightbox(${JSON.stringify(post.images).replace(/"/g, '&quot;')}, ${idx})">`).join('') + 
-            `</div>`;
-    }
-
-    let tagsHtml = '';
-    if (post.tags && post.tags.length > 0) {
-        tagsHtml = `<div style="margin-top: 15px;">` + post.tags.map(t => `<span class="post-tag">#${t}</span>`).join('') + `</div>`;
-    }
-
-    modalContentContainer.innerHTML = `
-        <div style="display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 10px;">
-            <h2 style="font-size: 1.25rem; font-weight: 600; color: var(--text-main);">${escapeHtml(post.title)}</h2>
-            <span style="font-size: 0.8rem; color: var(--text-muted);">${post.date}</span>
-        </div>
-        <p style="font-size: 0.95rem; color: var(--text-main); line-height: 1.6; white-space: pre-wrap; margin-top: 10px;">${escapeHtml(post.content)}</p>
-        ${imagesHtml}
-        ${tagsHtml}
-        <div style="margin-top: 20px; display: flex; justify-content: flex-end;">
-            <button type="button" onclick="editPost('${post.id}')" class="btn-primary" style="padding: 8px 16px; font-size: 0.85rem;">Redigera</button>
-        </div>
+    const imgsJson = JSON.stringify(post.images || []).replace(/"/g,'&quot;');
+    document.getElementById('modal-content-container').innerHTML = `
+        <div style="display:flex;justify-content:space-between;"><h2>${escapeHtml(post.title)}</h2><span style="font-size:0.8rem;color:var(--text-muted)">${post.date}</span></div>
+        <p style="white-space:pre-wrap;">${escapeHtml(post.content)}</p>
+        ${post.images && post.images.length ? `<div class="post-images">${post.images.map((img,i) => `<img src="${img}" onclick="event.stopPropagation();openLightbox(${imgsJson},${i})">`).join('')}</div>` : ''}
+        <div style="margin-top:20px;text-align:right"><button onclick="editPost('${post.id}')" class="btn-primary">Redigera</button></div>
     `;
-
-    postModal.classList.remove('hidden');
+    document.getElementById('post-modal').classList.remove('hidden');
 }
-
-window.editPost = function(id) {
-    const post = posts.find(p => p.id === id);
-    if (!post) return;
-
-    postModal.classList.add('hidden');
-    formSection.classList.remove('hidden');
-
-    document.getElementById('post-id').value = post.id;
-    document.getElementById('post-title').value = post.title;
-    document.getElementById('post-date').value = post.date;
-    document.getElementById('post-tags').value = post.tags ? post.tags.join(', ') : '';
-    document.getElementById('post-content').value = post.content;
-
-    currentImages = post.images ? [...post.images] : [];
+window.editPost = id => {
+    const p = posts.find(x => x.id===id); if (!p) return;
+    document.getElementById('post-modal').classList.add('hidden');
+    document.getElementById('form-section').classList.remove('hidden');
+    document.getElementById('post-id').value = p.id;
+    document.getElementById('post-title').value = p.title;
+    document.getElementById('post-date').value = p.date;
+    document.getElementById('post-tags').value = p.tags ? p.tags.join(', ') : '';
+    document.getElementById('post-content').value = p.content;
+    currentImages = p.images ? [...p.images] : [];
     renderImagePreviews();
 };
-
 async function deletePost(id) {
-    if (confirm('Är du säker på att du vill radera inlägget?')) {
-        await db.posts.delete(id);
-        posts = await db.posts.toArray();
-        sortPostsDescending(posts);
-        renderPosts();
-    }
+    if (confirm('Radera?')) { await db.posts.delete(id); posts = await db.posts.toArray(); sortPostsDescending(posts); renderPosts(); }
 }
 
+// ========== HÄNDELSER (PLANERING) ==========
 async function handleSavePlan(e) {
     e.preventDefault();
-    const id = document.getElementById('plan-id').value || 'plan_' + Date.now();
+    const id = document.getElementById('plan-id').value || 'plan_'+Date.now();
     const date = document.getElementById('plan-date').value;
     const time = document.getElementById('plan-time').value;
     const title = document.getElementById('plan-title').value.trim();
     const extra = document.getElementById('plan-extra').value.trim();
-
-    const planData = { id, date, time, title, extra };
-
-    await db.plans.put(planData);
-
-    plans = await db.plans.toArray();
-    plans.sort((a, b) => new Date(`${a.date}T${a.time}`) - new Date(`${b.date}T${b.time}`));
-
-    planFormSection.classList.add('hidden');
+    if (!date || !time || !title) return alert('Fyll i alla fält');
+    await db.plans.put({ id, date, time, title, extra });
+    plans = await db.plans.toArray(); plans.sort((a,b) => new Date(`${a.date}T${a.time}`) - new Date(`${b.date}T${b.time}`));
+    document.getElementById('plan-form-section').classList.add('hidden');
     resetPlanForm();
-    renderPlans();
+    renderPlans(); // Omskapar planlistan efter sparande
 }
-
-function resetPlanForm() {
-    planForm.reset();
-    document.getElementById('plan-id').value = '';
-    setDefaultDates();
-}
+function resetPlanForm() { document.getElementById('plan-form').reset(); document.getElementById('plan-id').value = ''; setDefaultDates(); }
 
 function renderPlans() {
-    plansContainer.innerHTML = '';
-
-    if (plans.length === 0) {
-        plansContainer.innerHTML = `<p style="color: var(--text-muted); text-align: center; padding: 20px;">Inga inbokade händelser.</p>`;
-        return;
-    }
-
+    const c = document.getElementById('plans-container');
+    c.innerHTML = '';
+    if (!plans.length) { c.innerHTML = '<p style="text-align:center;color:var(--text-muted);padding:20px;">Inga händelser</p>'; return; }
+    const now = new Date();
     plans.forEach(plan => {
+        const d = new Date(plan.date+'T00:00:00');
+        const day = d.getDate(), month = d.toLocaleString('sv-SE',{month:'short'});
+        const target = new Date(`${plan.date}T${plan.time}`);
+        const diff = target - now;
+        const isPast = diff < 0;
+        let cd = 'Passerat';
+        if (diff > 0) {
+            const days = Math.floor(diff/86400000), hrs = Math.floor((diff%86400000)/3600000), mins = Math.floor((diff%3600000)/60000), secs = Math.floor((diff%60000)/1000);
+            const pad = n => String(n).padStart(2,'0');
+            cd = days>0 ? `${days}d ${pad(hrs)}:${pad(mins)}:${pad(secs)}` : `${pad(hrs)}:${pad(mins)}:${pad(secs)}`;
+        }
         const item = document.createElement('div');
         item.className = 'plan-item';
-        item.style.cursor = 'pointer';
-
-        const dateObj = new Date(plan.date);
-        const dayNum = isNaN(dateObj.getDate()) ? plan.date.split('-')[2] : dateObj.getDate();
-        const monthStr = isNaN(dateObj.getMonth()) ? '' : dateObj.toLocaleString('sv-SE', { month: 'short' });
-
-        let countdownText = '';
-        const targetTime = new Date(`${plan.date}T${plan.time}`);
-        const now = new Date();
-        const diff = targetTime - now;
-
-        if (diff > 0) {
-            const days = Math.floor(diff / (1000 * 60 * 60 * 24));
-            const hours = Math.floor((diff % (1000 * 60 * 60 * 24)) / (1000 * 60 * 60));
-            const minutes = Math.floor((diff % (1000 * 60 * 60)) / (1000 * 60));
-            const seconds = Math.floor((diff % (1000 * 60)) / 1000);
-            const pad = (n) => String(n).padStart(2, '0');
-
-            if (days > 0) {
-                countdownText = `${days}d ${pad(hours)}:${pad(minutes)}:${pad(seconds)}`;
-            } else {
-                countdownText = `${pad(hours)}:${pad(minutes)}:${pad(seconds)}`;
-            }
-        } else {
-            countdownText = 'Passerat';
-        }
-
+        item.style.opacity = isPast ? '0.5' : '1';
         item.innerHTML = `
-            <div class="plan-date-box">
-                <div class="plan-date-day">${dayNum}</div>
-                <div class="plan-date-month">${monthStr}</div>
-            </div>
+            <div class="plan-date-box"><div class="plan-date-day">${day}</div><div class="plan-date-month">${month}</div></div>
             <div class="plan-details">
-                <div>
-                    <span class="plan-time">${plan.time}</span>
-                    ${countdownText ? `<span style="font-size: 0.75rem; color: var(--text-muted); opacity: 0.8; margin-left: 6px;">${countdownText}</span>` : ''}
-                </div>
-                <h3 style="font-size: 1rem; font-weight: 600; color: var(--text-main); margin-bottom: 2px;">${escapeHtml(plan.title)}</h3>
-                ${plan.extra ? `<p style="font-size: 0.85rem; color: var(--text-muted);">${escapeHtml(plan.extra)}</p>` : ''}
+                <div><span class="plan-time">${plan.time}</span> <span class="plan-countdown" data-time="${plan.date}T${plan.time}">${cd}</span></div>
+                <h3>${escapeHtml(plan.title)}</h3>${plan.extra ? `<p>${escapeHtml(plan.extra)}</p>` : ''}
             </div>
-            <button type="button" class="plan-delete-btn" onclick="event.stopPropagation(); deletePlan('${plan.id}')" title="Radera">✕</button>
+            <button class="plan-delete-btn" onclick="event.stopPropagation();deletePlan('${plan.id}')">✕</button>
         `;
-
-        item.addEventListener('click', () => editPlan(plan.id));
-
-        plansContainer.appendChild(item);
+        item.onclick = () => editPlan(plan.id);
+        c.appendChild(item);
     });
 }
 
-window.editPlan = function(id) {
-    const plan = plans.find(p => p.id === id);
-    if (!plan) return;
-
-    planFormSection.classList.remove('hidden');
-
-    document.getElementById('plan-id').value = plan.id;
-    document.getElementById('plan-date').value = plan.date;
-    document.getElementById('plan-time').value = plan.time;
-    document.getElementById('plan-title').value = plan.title;
-    document.getElementById('plan-extra').value = plan.extra || '';
-
-    planFormSection.scrollIntoView({ behavior: 'smooth' });
+window.editPlan = id => {
+    const p = plans.find(x => x.id===id); if (!p) return;
+    document.getElementById('plan-form-section').classList.remove('hidden');
+    document.getElementById('plan-id').value = p.id;
+    document.getElementById('plan-date').value = p.date;
+    document.getElementById('plan-time').value = p.time;
+    document.getElementById('plan-title').value = p.title;
+    document.getElementById('plan-extra').value = p.extra || '';
+    document.getElementById('plan-form-section').scrollIntoView({behavior:'smooth'});
 };
 
-window.deletePlan = async function(id) {
-    if (confirm('Vill du ta bort denna händelse?')) {
-        await db.plans.delete(id);
-        plans = await db.plans.toArray();
-        plans.sort((a, b) => new Date(`${a.date}T${a.time}`) - new Date(`${b.date}T${b.time}`));
-        renderPlans();
-    }
+window.deletePlan = async id => {
+    if (confirm('Radera händelse?')) { await db.plans.delete(id); plans = await db.plans.toArray(); plans.sort((a,b) => new Date(`${a.date}T${a.time}`) - new Date(`${b.date}T${b.time}`)); renderPlans(); }
 };
 
-window.openLightbox = function(imagesArray, index) {
-    lightboxImages = imagesArray;
-    lightboxCurrentIndex = index;
-    updateLightboxImage();
-    lightbox.classList.remove('hidden');
-};
-
-function updateLightboxImage() {
-    lightboxImg.src = lightboxImages[lightboxCurrentIndex];
+// ✅ Uppdaterar endast texten i nedräkningarna – rör inte DOM-strukturen
+function updateCountdowns() {
+    if (document.getElementById('plan-view').classList.contains('hidden')) return;
+    const now = new Date();
+    document.querySelectorAll('.plan-countdown').forEach(el => {
+        const t = el.getAttribute('data-time');
+        if (!t) return;
+        const target = new Date(t);
+        const diff = target - now;
+        if (diff <= 0) {
+            el.textContent = 'Passerat';
+            el.style.color = 'var(--text-muted)';
+            const item = el.closest('.plan-item');
+            if (item) item.style.opacity = '0.5';
+        } else {
+            const days = Math.floor(diff/86400000), hrs = Math.floor((diff%86400000)/3600000), mins = Math.floor((diff%3600000)/60000), secs = Math.floor((diff%60000)/1000);
+            const pad = n => String(n).padStart(2,'0');
+            el.textContent = days>0 ? `${days}d ${pad(hrs)}:${pad(mins)}:${pad(secs)}` : `${pad(hrs)}:${pad(mins)}:${pad(secs)}`;
+            el.style.color = '#8b5cf6';
+        }
+    });
 }
 
-function navigateLightbox(direction) {
-    lightboxCurrentIndex += direction;
-    if (lightboxCurrentIndex < 0) {
-        lightboxCurrentIndex = lightboxImages.length - 1;
-    } else if (lightboxCurrentIndex >= lightboxImages.length) {
-        lightboxCurrentIndex = 0;
-    }
-    updateLightboxImage();
-}
-
-function escapeHtml(str) {
-    return str
-        .replace(/&/g, "&amp;")
-        .replace(/</g, "&lt;")
-        .replace(/>/g, "&gt;")
-        .replace(/"/g, "&quot;")
-        .replace(/'/g, "&#039;");
-}
+// ========== LIGHTBOX ==========
+window.openLightbox = (imgs, idx) => { lightboxImages = imgs; lightboxCurrentIndex = idx; updateLightbox(); document.getElementById('lightbox').classList.remove('hidden'); };
+function updateLightbox() { document.getElementById('lightbox-img').src = lightboxImages[lightboxCurrentIndex]; }
+function navigateLightbox(dir) { lightboxCurrentIndex = (lightboxCurrentIndex + dir + lightboxImages.length) % lightboxImages.length; updateLightbox(); }
