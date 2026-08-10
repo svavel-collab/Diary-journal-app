@@ -1,5 +1,7 @@
-// Dexie.js databasinitiering
-const db = new Dexie("DigitalJournalDB");
+// Dexie.js databasinitiering (Global via window.db)
+window.db = new Dexie("DigitalJournalDB");
+const db = window.db;
+
 db.version(1).stores({
     posts: 'id, date, title',
     plans: 'id, date, time'

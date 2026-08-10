@@ -1,7 +1,8 @@
 // EXPORTERA ALLA INLÄGG OCH PLANER FRÅN INDEXEDDB
 document.getElementById('export-btn').addEventListener('click', async () => {
     try {
-        if (typeof db === 'undefined') {
+        const db = window.db;
+        if (!db) {
             alert('Databasen är inte redo ännu. Vänta ett ögonblick och försök igen.');
             return;
         }
@@ -19,9 +20,16 @@ document.getElementById('export-btn').addEventListener('click', async () => {
         const blob = new Blob([jsonString], { type: "application/json" });
         const url = URL.createObjectURL(blob);
 
+        // Skapar formatet jour_YYYYMMDD.json
+        const now = new Date();
+        const year = now.getFullYear();
+        const month = String(now.getMonth() + 1).padStart(2, '0');
+        const day = String(now.getDate()).padStart(2, '0');
+        const fileName = `jour_${year}${month}${day}.json`;
+
         const downloadAnchor = document.createElement('a');
         downloadAnchor.href = url;
-        downloadAnchor.download = `digital_journal_backup_${new Date().toISOString().split('T')[0]}.json`;
+        downloadAnchor.download = fileName;
         document.body.appendChild(downloadAnchor);
         downloadAnchor.click();
         downloadAnchor.remove();
@@ -41,6 +49,11 @@ document.getElementById('import-file').addEventListener('change', (e) => {
     
     reader.onload = async (event) => {
         try {
+            const db = window.db;
+            if (!db) {
+                throw new Error("Databasen hittades inte.");
+            }
+
             // Rensa eventuella osynliga BOM-tecken i början av filen
             let content = event.target.result;
             if (content.charCodeAt(0) === 0xFEFF) {
