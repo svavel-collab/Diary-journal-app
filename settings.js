@@ -7,6 +7,7 @@ document.getElementById('export-btn').addEventListener('click', async () => {
             return;
         }
 
+        // Hämta all data från databasen korrekt
         const allPosts = await db.posts.toArray();
         const allPlans = await db.plans.toArray();
 
@@ -101,6 +102,7 @@ if (settingsTrigger && settingsModal && closeSettings) {
     settingsTrigger.addEventListener('click', () => settingsModal.classList.remove('hidden'));
     closeSettings.addEventListener('click', () => settingsModal.classList.add('hidden'));
     settingsModal.addEventListener('click', (e) => {
+        if (e.target === settingsModal) settingsModal.classList.remove('hidden');
         if (e.target === settingsModal) settingsModal.classList.add('hidden');
     });
 }
