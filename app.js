@@ -55,7 +55,6 @@ document.getElementById('home-btn').onclick = () => {
     document.getElementById('new-plan-trigger').classList.add('hidden');
     document.getElementById('view-title').innerHTML = 'Journal <span id="header-date"></span>';
     updateHeaderDate();
-    // 🆕 Uppdatera aktiva knappar
     document.getElementById('home-btn').classList.add('active');
     document.getElementById('calendar-btn').classList.remove('active');
 };
@@ -67,7 +66,6 @@ document.getElementById('calendar-btn').onclick = () => {
     document.getElementById('view-title').innerHTML = 'Planering <span id="header-date"></span>';
     updateHeaderDate();
     renderPlans();
-    // 🆕 Uppdatera aktiva knappar
     document.getElementById('calendar-btn').classList.add('active');
     document.getElementById('home-btn').classList.remove('active');
 };
@@ -311,7 +309,7 @@ document.getElementById('settings-modal').addEventListener('click', function(e) 
     if (e.target === this) this.classList.add('hidden');
 });
 
-// Export – filnamn jour_ååååmmdd.json
+// Export – filnamn jour_YYYYMMDD.json
 document.getElementById('export-btn').addEventListener('click', async function() {
     try {
         const data = {
@@ -327,64 +325,73 @@ document.getElementById('export-btn').addEventListener('click', async function()
         const year = now.getFullYear();
         const month = String(now.getMonth() + 1).padStart(2, '0');
         const day = String(now.getDate()).padStart(2, '0');
-        const fileName = `jour_${year}${month}${day}.json`;
-        console.log('📁 Filnamn:', fileName);
-        a.download = fileName;
+        a.download = `jour_${year}${month}${day}.json`;
         document.body.appendChild(a);
         a.click();
         a.remove();
         URL.revokeObjectURL(url);
-        alert('Export lyckades!');
     } catch (err) {
         console.error(err);
         alert('Export misslyckades.');
     }
 });
 
-// Import
+// Klick på "Importera JSON" öppnar den dolda filväljaren
 document.getElementById('import-btn').addEventListener('click', function() {
-    const fileInput = document.getElementById('import-file');
-    if (!fileInput.files.length) {
-        alert('Välj en JSON-fil först.');
+    document.getElementById('import-file').click();
+});
+
+// Import från vald fil
+document.getElementById('import-file').addEventListener('change', function(e) {
+    const file = e.target.files[0];
+    if (!file) return;
+
+    if (!confirm('Detta ersätter ALL nuvarande data. Vill du fortsätta?')) {
+        e.target.value = '';
         return;
     }
-    const file = fileInput.files[0];
-    if (!file.name.endsWith('.json')) {
-        alert('Filen måste ha .json-ändelse.');
-        return;
-    }
-    if (!confirm('Detta ersätter ALL data. Fortsätta?')) return;
 
     const reader = new FileReader();
-    reader.onload = async function(e) {
+    reader.onload = async function(ev) {
         try {
-            const data = JSON.parse(e.target.result);
-            if (!data.posts || !data.plans) {
-                throw new Error('Ogiltig fil: saknar posts/plans.');
+            let content = ev.target.result;
+            if (content.charCodeAt(0) === 0xFEFF) {
+                content = content.slice(1);
             }
+            const data = JSON.parse(content);
+
+            if (!data.posts && !data.plans) {
+                throw new Error('Filen saknar giltig data (posts/plans).');
+            }
+
             await db.transaction('rw', db.posts, db.plans, async () => {
                 await db.posts.clear();
                 await db.plans.clear();
-                await db.posts.bulkPut(data.posts);
-                await db.plans.bulkPut(data.plans);
+                if (data.posts && Array.isArray(data.posts)) await db.posts.bulkPut(data.posts);
+                if (data.plans && Array.isArray(data.plans)) await db.plans.bulkPut(data.plans);
             });
+
             posts = await db.posts.toArray();
             sortPostsDescending(posts);
             plans = await db.plans.toArray();
             plans.sort((a,b) => new Date(`${a.date}T${a.time}`) - new Date(`${b.date}T${b.time}`));
+            
             renderPosts();
             renderPlans();
-            fileInput.value = '';
-            alert('Import lyckades!');
+            document.getElementById('settings-modal').classList.add('hidden');
+            alert('Importen lyckades!');
         } catch (err) {
             console.error(err);
             alert('Import misslyckades: ' + err.message);
+        } finally {
+            e.target.value = '';
         }
     };
-    reader.readAsText(file);
+    reader.readAsText(file, 'UTF-8');
 });
 
-// Koppla settings-knappen
+// Koppla settings-knappen i headern
+// Koppla settings-knappen i headern
 document.addEventListener('DOMContentLoaded', function() {
     const settingsBtn = document.getElementById('settings-btn');
     if (settingsBtn) {
