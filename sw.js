@@ -1,4 +1,4 @@
-const CACHE_NAME = 'journal-cache-v2';
+const CACHE_NAME = 'journal-cache-supabase-v2';
 const ASSETS = [
   './',
   './index.html',
@@ -6,7 +6,7 @@ const ASSETS = [
   './app.js',
   './ikon.png',
   './manifest.json',
-  'https://unpkg.com/dexie/dist/dexie.js'
+  'https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2'
 ];
 
 self.addEventListener('install', event => {

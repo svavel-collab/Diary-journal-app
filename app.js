@@ -1,10 +1,11 @@
-// Dexie.js databas
-window.db = new Dexie("DigitalJournalDB");
-const db = window.db;
-db.version(1).stores({ posts: 'id, date, title', plans: 'id, date, time' });
+// ==========================================
+// SUPABASE KONFIGURATION
+// ==========================================
+const SUPABASE_URL = 'https://dlnetiryfhndmrbapgun.supabase.co'; 
+const SUPABASE_ANON_KEY = 'sb_publishable_kZw8bigzxzrXLHDWaQR-Qg_ewteBygi';
 
-const POSTS_KEY = 'digital_journal_posts';
-const PLANS_KEY = 'digital_journal_plans';
+const { createClient } = supabase;
+const db = createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
 
 let posts = [], plans = [], currentFilter = 'all', currentImages = [], currentModalPostId = null;
 let lightboxImages = [], lightboxCurrentIndex = 0;
@@ -23,19 +24,28 @@ function sortPostsDescending(arr) {
 
 async function loadInitialData() {
     try {
-        const oldPosts = JSON.parse(localStorage.getItem(POSTS_KEY)) || [];
-        const oldPlans = JSON.parse(localStorage.getItem(PLANS_KEY)) || [];
-        if (oldPosts.length) { await db.posts.bulkPut(oldPosts); localStorage.removeItem(POSTS_KEY); }
-        if (oldPlans.length) { await db.plans.bulkPut(oldPlans); localStorage.removeItem(PLANS_KEY); }
-        posts = await db.posts.toArray(); sortPostsDescending(posts);
-        plans = await db.plans.toArray(); plans.sort((a,b) => new Date(`${a.date}T${a.time}`) - new Date(`${b.date}T${b.time}`));
-        renderPosts(); renderPlans();
-    } catch (e) { console.error(e); }
+        // Hämta inlägg från Supabase
+        const { data: postsData, error: postsError } = await db.from('posts').select('*');
+        if (postsError) throw postsError;
+        posts = postsData || [];
+        sortPostsDescending(posts);
+
+        // Hämta planerade händelser från Supabase
+        const { data: plansData, error: plansError } = await db.from('plans').select('*');
+        if (plansError) throw plansError;
+        plans = plansData || [];
+        plans.sort((a,b) => new Date(`${a.date}T${a.time}`) - new Date(`${b.date}T${b.time}`));
+
+        renderPosts(); 
+        renderPlans();
+    } catch (e) { 
+        console.error('Kunde inte ladda data från Supabase:', e); 
+    }
 }
 
 function updateHeaderDate() {
     const el = document.getElementById('header-date');
-    if (el) { const d = new Date(); el.textContent = `${d.getDate()} ${d.toLocaleString('sv-SE',{month:'short'}).replace('.','')}`; }
+    if (el) { const d = new Date(); el.textContent = `${d.getDate()}${d.toLocaleString('sv-SE',{month:'short'}).replace('.','')}`; }
 }
 
 function setDefaultDates() {
@@ -45,7 +55,7 @@ function setDefaultDates() {
     document.getElementById('plan-time').value = '12:00';
 }
 
-function escapeHtml(s) { return s.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;'); }
+function escapeHtml(s) { return s ? String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;') : ''; }
 
 // ========== VYER ==========
 document.getElementById('home-btn').onclick = () => {
@@ -114,7 +124,7 @@ function renderImagePreviews() {
     currentImages.forEach((src,i) => {
         const w = document.createElement('div');
         w.style.position = 'relative';
-        w.innerHTML = `<img src="${src}" style="width:72px;height:72px;object-fit:cover;border-radius:10px;"><button onclick="removePreviewImage(${i})" style="position:absolute;top:-6px;right:-6px;background:#ef4444;color:white;border:none;border-radius:50%;width:20px;height:20px;font-size:10px;cursor:pointer;">✕</button>`;
+        w.innerHTML = `<img src="${src}" style="width:72px;height:72px;object-fit:cover;border-radius:10px;"><button type="button" onclick="removePreviewImage(${i})" style="position:absolute;top:-6px;right:-6px;background:#ef4444;color:white;border:none;border-radius:50%;width:20px;height:20px;font-size:10px;cursor:pointer;">✕</button>`;
         c.appendChild(w);
     });
 }
@@ -123,18 +133,27 @@ window.removePreviewImage = i => { currentImages.splice(i,1); renderImagePreview
 // ========== INLÄGG ==========
 async function handleSavePost(e) {
     e.preventDefault();
-    const id = document.getElementById('post-id').value || 'post_'+Date.now();
+    const id = document.getElementById('post-id').value || 'post_' + Date.now();
     const title = document.getElementById('post-title').value.trim();
     const date = document.getElementById('post-date').value;
     const tags = (document.getElementById('post-tags').value || '').split(',').map(t=>t.trim()).filter(Boolean);
     const content = document.getElementById('post-content').value.trim();
     if (!title || !date || !content) return alert('Fyll i alla fält');
-    await db.posts.put({ id, title, date, tags, content, images: [...currentImages] });
-    posts = await db.posts.toArray(); sortPostsDescending(posts);
+
+    const postData = { id, title, date, tags, content, images: [...currentImages] };
+
+    const { error } = await db.from('posts').upsert(postData);
+    if (error) {
+        console.error('Fel vid sparande till Supabase:', error);
+        alert('Kunde inte spara inlägget till molnet.');
+        return;
+    }
+
+    await loadInitialData();
     document.getElementById('form-section').classList.add('hidden');
     resetJournalForm();
-    renderPosts();
 }
+
 function resetJournalForm() {
     document.getElementById('journal-form').reset();
     document.getElementById('post-id').value = '';
@@ -142,6 +161,7 @@ function resetJournalForm() {
     document.getElementById('image-preview-container').innerHTML = '';
     setDefaultDates();
 }
+
 function renderPosts() {
     const c = document.getElementById('posts-container');
     c.innerHTML = '';
@@ -159,14 +179,14 @@ function renderPosts() {
         card.className = 'post-card';
         card.innerHTML = `
             <div style="display:flex;justify-content:space-between;"><h3>${escapeHtml(p.title)}</h3><span style="font-size:0.75rem;color:var(--text-muted)">${p.date}</span></div>
-            <p style="display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden;">${escapeHtml(p.content)}</p>
-            ${p.images && p.images.length ? `<div class="post-images">${p.images.map(img => `<img src="${img}">`).join('')}</div>` : ''}
+            <p style="display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden;">${escapeHtml(p.content)}</p>${p.images && p.images.length ? `<div class="post-images">${p.images.map(img => `<img src="${img}">`).join('')}</div>` : ''}
             <div>${p.tags ? p.tags.map(t => `<span class="post-tag">#${t}</span>`).join('') : ''}</div>
         `;
         card.onclick = () => openPostModal(p);
         c.appendChild(card);
     });
 }
+
 function renderFilterChips() {
     const c = document.getElementById('filter-tags-container');
     c.innerHTML = '';
@@ -176,17 +196,18 @@ function renderFilterChips() {
         const btn = document.createElement('button'); btn.className = `filter-chip ${currentFilter.toLowerCase()===tag.toLowerCase()?'active':''}`; btn.textContent=tag; btn.onclick=()=>{currentFilter=tag;renderPosts();}; c.appendChild(btn);
     });
 }
+
 function openPostModal(post) {
     currentModalPostId = post.id;
     const imgsJson = JSON.stringify(post.images || []).replace(/"/g,'&quot;');
     document.getElementById('modal-content-container').innerHTML = `
         <div style="display:flex;justify-content:space-between;"><h2>${escapeHtml(post.title)}</h2><span style="font-size:0.8rem;color:var(--text-muted)">${post.date}</span></div>
-        <p style="white-space:pre-wrap;">${escapeHtml(post.content)}</p>
-        ${post.images && post.images.length ? `<div class="post-images">${post.images.map((img,i) => `<img src="${img}" onclick="event.stopPropagation();openLightbox(${imgsJson},${i})">`).join('')}</div>` : ''}
-        <div style="margin-top:20px;text-align:right"><button onclick="editPost('${post.id}')" class="btn-primary">Redigera</button></div>
+        <p style="white-space:pre-wrap;">${escapeHtml(post.content)}</p>${post.images && post.images.length ? `<div class="post-images">${post.images.map((img,i) => `<img src="${img}" onclick="event.stopPropagation();openLightbox(${imgsJson},${i})">`).join('')}</div>` : ''}
+        <div style="margin-top:20px;text-align:right"><button type="button" onclick="editPost('${post.id}')" class="btn-primary">Redigera</button></div>
     `;
     document.getElementById('post-modal').classList.remove('hidden');
 }
+
 window.editPost = id => {
     const p = posts.find(x => x.id===id); if (!p) return;
     document.getElementById('post-modal').classList.add('hidden');
@@ -199,25 +220,43 @@ window.editPost = id => {
     currentImages = p.images ? [...p.images] : [];
     renderImagePreviews();
 };
+
 async function deletePost(id) {
-    if (confirm('Radera?')) { await db.posts.delete(id); posts = await db.posts.toArray(); sortPostsDescending(posts); renderPosts(); }
+    if (confirm('Radera inlägg?')) {
+        const { error } = await db.from('posts').delete().eq('id', id);
+        if (error) {
+            alert('Kunde inte radera inlägget.');
+            return;
+        }
+        await loadInitialData();
+        renderPosts();
+    }
 }
 
 // ========== HÄNDELSER (PLANERING) ==========
 async function handleSavePlan(e) {
     e.preventDefault();
-    const id = document.getElementById('plan-id').value || 'plan_'+Date.now();
+    const id = document.getElementById('plan-id').value || 'plan_' + Date.now();
     const date = document.getElementById('plan-date').value;
     const time = document.getElementById('plan-time').value;
     const title = document.getElementById('plan-title').value.trim();
     const extra = document.getElementById('plan-extra').value.trim();
     if (!date || !time || !title) return alert('Fyll i alla fält');
-    await db.plans.put({ id, date, time, title, extra });
-    plans = await db.plans.toArray(); plans.sort((a,b) => new Date(`${a.date}T${a.time}`) - new Date(`${b.date}T${b.time}`));
+
+    const planData = { id, date, time, title, extra };
+
+    const { error } = await db.from('plans').upsert(planData);
+    if (error) {
+        console.error('Fel vid sparande av händelse:', error);
+        alert('Kunde inte spara händelsen till molnet.');
+        return;
+    }
+
+    await loadInitialData();
     document.getElementById('plan-form-section').classList.add('hidden');
     resetPlanForm();
-    renderPlans();
 }
+
 function resetPlanForm() { document.getElementById('plan-form').reset(); document.getElementById('plan-id').value = ''; setDefaultDates(); }
 
 function renderPlans() {
@@ -235,7 +274,7 @@ function renderPlans() {
         if (diff > 0) {
             const days = Math.floor(diff/86400000), hrs = Math.floor((diff%86400000)/3600000), mins = Math.floor((diff%3600000)/60000), secs = Math.floor((diff%60000)/1000);
             const pad = n => String(n).padStart(2,'0');
-            cd = days>0 ? `${days}d ${pad(hrs)}:${pad(mins)}:${pad(secs)}` : `${pad(hrs)}:${pad(mins)}:${pad(secs)}`;
+            cd = days>0 ? `${days}d${pad(hrs)}:${pad(mins)}:${pad(secs)}` : `${pad(hrs)}:${pad(mins)}:${pad(secs)}`;
         }
         const item = document.createElement('div');
         item.className = 'plan-item';
@@ -243,54 +282,4 @@ function renderPlans() {
         item.innerHTML = `
             <div class="plan-date-box"><div class="plan-date-day">${day}</div><div class="plan-date-month">${month}</div></div>
             <div class="plan-details">
-                <div><span class="plan-time">${plan.time}</span> <span class="plan-countdown" data-time="${plan.date}T${plan.time}">${cd}</span></div>
-                <h3>${escapeHtml(plan.title)}</h3>${plan.extra ? `<p>${escapeHtml(plan.extra)}</p>` : ''}
-            </div>
-            <button class="plan-delete-btn" onclick="event.stopPropagation();deletePlan('${plan.id}')">✕</button>
-        `;
-        item.onclick = () => editPlan(plan.id);
-        c.appendChild(item);
-    });
-}
-
-window.editPlan = id => {
-    const p = plans.find(x => x.id===id); if (!p) return;
-    document.getElementById('plan-form-section').classList.remove('hidden');
-    document.getElementById('plan-id').value = p.id;
-    document.getElementById('plan-date').value = p.date;
-    document.getElementById('plan-time').value = p.time;
-    document.getElementById('plan-title').value = p.title;
-    document.getElementById('plan-extra').value = p.extra || '';
-    document.getElementById('plan-form-section').scrollIntoView({behavior:'smooth'});
-};
-
-window.deletePlan = async id => {
-    if (confirm('Radera händelse?')) { await db.plans.delete(id); plans = await db.plans.toArray(); plans.sort((a,b) => new Date(`${a.date}T${a.time}`) - new Date(`${b.date}T${b.time}`)); renderPlans(); }
-};
-
-function updateCountdowns() {
-    if (document.getElementById('plan-view').classList.contains('hidden')) return;
-    const now = new Date();
-    document.querySelectorAll('.plan-countdown').forEach(el => {
-        const t = el.getAttribute('data-time');
-        if (!t) return;
-        const target = new Date(t);
-        const diff = target - now;
-        if (diff <= 0) {
-            el.textContent = 'Passerat';
-            el.style.color = 'var(--text-muted)';
-            const item = el.closest('.plan-item');
-            if (item) item.style.opacity = '0.5';
-        } else {
-            const days = Math.floor(diff/86400000), hrs = Math.floor((diff%86400000)/3600000), mins = Math.floor((diff%3600000)/60000), secs = Math.floor((diff%60000)/1000);
-            const pad = n => String(n).padStart(2,'0');
-            el.textContent = days>0 ? `${days}d ${pad(hrs)}:${pad(mins)}:${pad(secs)}` : `${pad(hrs)}:${pad(mins)}:${pad(secs)}`;
-            el.style.color = '#8b5cf6';
-        }
-    });
-}
-
-// ========== LIGHTBOX ==========
-window.openLightbox = (imgs, idx) => { lightboxImages = imgs; lightboxCurrentIndex = idx; updateLightbox(); document.getElementById('lightbox').classList.remove('hidden'); };
-function updateLightbox() { document.getElementById('lightbox-img').src = lightboxImages[lightboxCurrentIndex]; }
-function navigateLightbox(dir) { lightboxCurrentIndex = (lightboxCurrentIndex + dir + lightboxImages.length) % lightboxImages.length; updateLightbox(); }
+                <div><span class="plan-time">${plan.time}</span> <span class="plan
