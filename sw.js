@@ -1,4 +1,4 @@
-const CACHE_NAME = 'journal-cache-supabase-v3';
+const CACHE_NAME = 'journal-cache-supabase-v5';
 const urlsToCache = [
     './',
     './index.html',
@@ -8,7 +8,6 @@ const urlsToCache = [
     './ikon.png'
 ];
 
-// Installera Service Worker och cacha grundfiler
 self.addEventListener('install', event => {
     event.waitUntil(
         caches.open(CACHE_NAME)
@@ -17,7 +16,6 @@ self.addEventListener('install', event => {
     );
 });
 
-// Aktivera och rensa gamla cachar
 self.addEventListener('activate', event => {
     event.waitUntil(
         caches.keys().then(cacheNames => {
@@ -32,9 +30,8 @@ self.addEventListener('activate', event => {
     );
 });
 
-// Hantera nätverksanrop
 self.addEventListener('fetch', event => {
-    // VIKTIGT: Släpp igenom alla anrop till Supabase direkt till nätverket utan att cacha
+    // Släpp alltid igenom anrop till Supabase direkt ut på nätverket
     if (event.request.url.includes('supabase.co')) {
         return;
     }
@@ -42,7 +39,6 @@ self.addEventListener('fetch', event => {
     event.respondWith(
         caches.match(event.request)
             .then(response => {
-                // Returnera från cache om den finns, annars hämta från nätverket
                 return response || fetch(event.request);
             })
     );
