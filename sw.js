@@ -1,4 +1,4 @@
-const CACHE_NAME = 'journal-cache-supabase-v2';
+const CACHE_NAME = 'journal-cache-supabase-v3';
 const urlsToCache = [
     './',
     './index.html',
