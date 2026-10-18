@@ -1,11 +1,11 @@
-const CACHE_NAME = 'journal-cache-v1';
+const CACHE_NAME = 'journal-cache-v2';
 const ASSETS = [
-  '/',
-  '/index.html',
-  '/style.css',
-  '/app.js',
-  '/ikon.png',
-  '/manifest.json',
+  './',
+  './index.html',
+  './style.css',
+  './app.js',
+  './ikon.png',
+  './manifest.json',
   'https://unpkg.com/dexie/dist/dexie.js'
 ];
 
@@ -34,7 +34,7 @@ self.addEventListener('fetch', event => {
           caches.open(CACHE_NAME).then(cache => cache.put(event.request, clone));
         }
         return response;
-      }).catch(() => cached); // offline-fallback
+      }).catch(() => cached);
       return cached || fetchPromise;
     })
   );

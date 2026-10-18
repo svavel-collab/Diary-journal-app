@@ -21,7 +21,6 @@
         <div class="header-actions">
             <button type="button" id="home-btn" class="icon-btn active" title="Journal">📖</button>
             <button type="button" id="calendar-btn" class="icon-btn" title="Planering">📅</button>
-            <button type="button" id="settings-btn" class="icon-btn" title="Inställningar">⚙️</button>
             <button type="button" id="new-post-trigger" class="fab-btn">+</button>
             <button type="button" id="new-plan-trigger" class="fab-btn hidden">+</button>
         </div>
@@ -94,22 +93,6 @@
     </div>
 </div>
 
-<!-- SETTINGS MODAL -->
-<div id="settings-modal" class="modal-overlay hidden">
-    <div class="modal-content settings-card">
-        <h2 class="settings-title">Inställningar &amp; Data</h2>
-        <p class="settings-subtitle">Exportera eller importera din JSON-data för säkerhets skull.</p>
-
-        <div class="settings-actions">
-            <button type="button" id="export-btn" class="btn-purple">Exportera JSON</button>
-            <button type="button" id="import-btn" class="btn-dark-outline">Importera JSON</button>
-            <button type="button" id="close-settings" class="btn-dark-outline">Stäng</button>
-        </div>
-
-        <input type="file" id="import-file" accept=".json" class="hidden">
-    </div>
-</div>
-
 <!-- LIGHTBOX -->
 <div id="lightbox" class="lightbox hidden">
     <button type="button" id="lightbox-close" class="lightbox-btn">✕</button>
@@ -118,6 +101,6 @@
     <button type="button" id="lightbox-next" class="lightbox-btn">❯</button>
 </div>
 
-<script src="app.js?v=1.1"></script>
+<script src="app.js?v=1.2"></script>
 </body>
 </html>
