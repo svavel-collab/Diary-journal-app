@@ -4,8 +4,12 @@
 const SUPABASE_URL = 'https://dlnetiryfhndmrbapgun.supabase.co'; 
 const SUPABASE_ANON_KEY = 'sb_publishable_kZw8bigzxzrXLHDWaQR-Qg_ewteBygi';
 
-const { createClient } = supabase;
-const db = createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+let db = null;
+if (window.supabase && window.supabase.createClient) {
+    db = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+} else {
+    console.error('Supabase biblioteket kunde inte laddas.');
+}
 
 let posts = [], plans = [], currentFilter = 'all', currentImages = [], currentModalPostId = null;
 let lightboxImages = [], lightboxCurrentIndex = 0;
@@ -13,16 +17,20 @@ let lightboxImages = [], lightboxCurrentIndex = 0;
 document.addEventListener('DOMContentLoaded', async () => {
     setDefaultDates();
     updateHeaderDate();
-    await loadInitialData();
     setupEventListeners();
+    await loadInitialData();
     setInterval(updateCountdowns, 1000);
 });
 
 function sortPostsDescending(arr) {
-    return arr.sort((a, b) => new Date(b.date) - new Date(a.date) || String(b.id).localeCompare(String(b.id)));
+    return arr.sort((a, b) => new Date(b.date) - new Date(a.date) || String(b.id).localeCompare(String(a.id)));
 }
 
 async function loadInitialData() {
+    if (!db) {
+        alert('Det gick inte att ansluta till databasen (Supabase-skriptet saknas). Kontrollera internetanslutningen.');
+        return;
+    }
     try {
         const { data: postsData, error: postsError } = await db.from('posts').select('*');
         if (postsError) {
@@ -66,56 +74,102 @@ function setDefaultDates() {
 function escapeHtml(s) { return s ? String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;') : ''; }
 
 // ========== VYER ==========
-document.getElementById('home-btn').onclick = () => {
-    document.getElementById('journal-view').classList.remove('hidden');
-    document.getElementById('plan-view').classList.add('hidden');
-    document.getElementById('new-post-trigger').classList.remove('hidden');
-    document.getElementById('new-plan-trigger').classList.add('hidden');
-    document.getElementById('view-title').innerHTML = 'Journal <span id="header-date"></span>';
-    updateHeaderDate();
-    document.getElementById('home-btn').classList.add('active');
-    document.getElementById('calendar-btn').classList.remove('active');
-};
-document.getElementById('calendar-btn').onclick = () => {
-    document.getElementById('plan-view').classList.remove('hidden');
-    document.getElementById('journal-view').classList.add('hidden');
-    document.getElementById('new-plan-trigger').classList.remove('hidden');
-    document.getElementById('new-post-trigger').classList.add('hidden');
-    document.getElementById('view-title').innerHTML = 'Planering <span id="header-date"></span>';
-    updateHeaderDate();
-    renderPlans();
-    document.getElementById('calendar-btn').classList.add('active');
-    document.getElementById('home-btn').classList.remove('active');
-};
-
-// ========== EVENT LISTENERS ==========
 function setupEventListeners() {
-    document.getElementById('new-post-trigger').onclick = () => { resetJournalForm(); document.getElementById('form-section').classList.toggle('hidden'); };
-    document.getElementById('cancel-btn').onclick = () => document.getElementById('form-section').classList.add('hidden');
-    document.getElementById('new-plan-trigger').onclick = () => { resetPlanForm(); document.getElementById('plan-form-section').classList.toggle('hidden'); };
-    document.getElementById('plan-cancel-btn').onclick = () => document.getElementById('plan-form-section').classList.add('hidden');
-    document.getElementById('journal-form').onsubmit = handleSavePost;
-    document.getElementById('plan-form').onsubmit = handleSavePlan;
-    document.getElementById('post-images').onchange = handleImageUpload;
-    document.getElementById('close-modal').onclick = () => document.getElementById('post-modal').classList.add('hidden');
-    document.getElementById('delete-modal-btn').onclick = () => {
-        if (currentModalPostId) { deletePost(currentModalPostId); document.getElementById('post-modal').classList.add('hidden'); }
-    };
-    document.getElementById('lightbox-close').onclick = () => document.getElementById('lightbox').classList.add('hidden');
-    document.getElementById('lightbox-prev').onclick = () => navigateLightbox(-1);
-    document.getElementById('lightbox-next').onclick = () => navigateLightbox(1);
+    const homeBtn = document.getElementById('home-btn');
+    const calBtn = document.getElementById('calendar-btn');
+    
+    if (homeBtn) {
+        homeBtn.onclick = () => {
+            document.getElementById('journal-view').classList.remove('hidden');
+            document.getElementById('plan-view').classList.add('hidden');
+            document.getElementById('new-post-trigger').classList.remove('hidden');
+            document.getElementById('new-plan-trigger').classList.add('hidden');
+            document.getElementById('view-title').innerHTML = 'Journal <span id="header-date"></span>';
+            updateHeaderDate();
+            homeBtn.classList.add('active');
+            if (calBtn) calBtn.classList.remove('active');
+        };
+    }
+
+    if (calBtn) {
+        calBtn.onclick = () => {
+            document.getElementById('plan-view').classList.remove('hidden');
+            document.getElementById('journal-view').classList.add('hidden');
+            document.getElementById('new-plan-trigger').classList.remove('hidden');
+            document.getElementById('new-post-trigger').classList.add('hidden');
+            document.getElementById('view-title').innerHTML = 'Planering <span id="header-date"></span>';
+            updateHeaderDate();
+            renderPlans();
+            calBtn.classList.add('active');
+            if (homeBtn) homeBtn.classList.remove('active');
+        };
+    }
+
+    const newPostTrigger = document.getElementById('new-post-trigger');
+    if (newPostTrigger) {
+        newPostTrigger.onclick = () => { resetJournalForm(); document.getElementById('form-section').classList.toggle('hidden'); };
+    }
+
+    const cancelBtn = document.getElementById('cancel-btn');
+    if (cancelBtn) {
+        cancelBtn.onclick = () => document.getElementById('form-section').classList.add('hidden');
+    }
+
+    const newPlanTrigger = document.getElementById('new-plan-trigger');
+    if (newPlanTrigger) {
+        newPlanTrigger.onclick = () => { resetPlanForm(); document.getElementById('plan-form-section').classList.toggle('hidden'); };
+    }
+
+    const planCancelBtn = document.getElementById('plan-cancel-btn');
+    if (planCancelBtn) {
+        planCancelBtn.onclick = () => document.getElementById('plan-form-section').classList.add('hidden');
+    }
+
+    const journalForm = document.getElementById('journal-form');
+    if (journalForm) journalForm.onsubmit = handleSavePost;
+
+    const planForm = document.getElementById('plan-form');
+    if (planForm) planForm.onsubmit = handleSavePlan;
+
+    const postImages = document.getElementById('post-images');
+    if (postImages) postImages.onchange = handleImageUpload;
+
+    const closeModal = document.getElementById('close-modal');
+    if (closeModal) closeModal.onclick = () => document.getElementById('post-modal').classList.add('hidden');
+
+    const deleteModalBtn = document.getElementById('delete-modal-btn');
+    if (deleteModalBtn) {
+        deleteModalBtn.onclick = () => {
+            if (currentModalPostId) { deletePost(currentModalPostId); document.getElementById('post-modal').classList.add('hidden'); }
+        };
+    }
+
+    const lbClose = document.getElementById('lightbox-close');
+    if (lbClose) lbClose.onclick = () => document.getElementById('lightbox').classList.add('hidden');
+
+    const lbPrev = document.getElementById('lightbox-prev');
+    if (lbPrev) lbPrev.onclick = () => navigateLightbox(-1);
+
+    const lbNext = document.getElementById('lightbox-next');
+    if (lbNext) lbNext.onclick = () => navigateLightbox(1);
+
     const searchInput = document.getElementById('search-input');
     if (searchInput) {
         searchInput.oninput = function() {
-            document.getElementById('clear-search-btn').classList.toggle('hidden', !this.value);
+            const clearBtn = document.getElementById('clear-search-btn');
+            if (clearBtn) clearBtn.classList.toggle('hidden', !this.value);
             renderPosts();
         };
     }
-    document.getElementById('clear-search-btn').onclick = () => {
-        document.getElementById('search-input').value = '';
-        document.getElementById('clear-search-btn').classList.add('hidden');
-        renderPosts();
-    };
+
+    const clearSearchBtn = document.getElementById('clear-search-btn');
+    if (clearSearchBtn) {
+        clearSearchBtn.onclick = () => {
+            if (searchInput) searchInput.value = '';
+            clearSearchBtn.classList.add('hidden');
+            renderPosts();
+        };
+    }
 }
 
 // ========== BILDER ==========
@@ -131,6 +185,7 @@ function handleImageUpload(e) {
 }
 function renderImagePreviews() {
     const c = document.getElementById('image-preview-container');
+    if (!c) return;
     c.innerHTML = '';
     currentImages.forEach((src,i) => {
         const w = document.createElement('div');
@@ -144,6 +199,8 @@ window.removePreviewImage = i => { currentImages.splice(i,1); renderImagePreview
 // ========== INLÄGG ==========
 async function handleSavePost(e) {
     e.preventDefault();
+    if (!db) return alert('Ingen anslutning till molnet.');
+    
     const id = document.getElementById('post-id').value || 'post_' + Date.now();
     const title = document.getElementById('post-title').value.trim();
     const date = document.getElementById('post-date').value;
@@ -166,10 +223,12 @@ async function handleSavePost(e) {
 }
 
 function resetJournalForm() {
-    document.getElementById('journal-form').reset();
+    const form = document.getElementById('journal-form');
+    if (form) form.reset();
     document.getElementById('post-id').value = '';
     currentImages = [];
-    document.getElementById('image-preview-container').innerHTML = '';
+    const prev = document.getElementById('image-preview-container');
+    if (prev) prev.innerHTML = '';
     setDefaultDates();
 }
 
@@ -238,6 +297,7 @@ window.editPost = id => {
 };
 
 async function deletePost(id) {
+    if (!db) return alert('Ingen anslutning till molnet.');
     if (confirm('Radera inlägg?')) {
         const { error } = await db.from('posts').delete().eq('id', id);
         if (error) {
@@ -252,6 +312,8 @@ async function deletePost(id) {
 // ========== HÄNDELSER (PLANERING) ==========
 async function handleSavePlan(e) {
     e.preventDefault();
+    if (!db) return alert('Ingen anslutning till molnet.');
+    
     const id = document.getElementById('plan-id').value || 'plan_' + Date.now();
     const date = document.getElementById('plan-date').value;
     const time = document.getElementById('plan-time').value;
@@ -273,7 +335,12 @@ async function handleSavePlan(e) {
     resetPlanForm();
 }
 
-function resetPlanForm() { document.getElementById('plan-form').reset(); document.getElementById('plan-id').value = ''; setDefaultDates(); }
+function resetPlanForm() {
+    const form = document.getElementById('plan-form');
+    if (form) form.reset();
+    document.getElementById('plan-id').value = '';
+    setDefaultDates();
+}
 
 function renderPlans() {
     const c = document.getElementById('plans-container');
@@ -321,6 +388,7 @@ window.editPlan = id => {
 };
 
 window.deletePlan = async id => {
+    if (!db) return alert('Ingen anslutning till molnet.');
     if (confirm('Radera händelse?')) {
         const { error } = await db.from('plans').delete().eq('id', id);
         if (error) {
@@ -333,7 +401,8 @@ window.deletePlan = async id => {
 };
 
 function updateCountdowns() {
-    if (document.getElementById('plan-view').classList.contains('hidden')) return;
+    const planView = document.getElementById('plan-view');
+    if (!planView || planView.classList.contains('hidden')) return;
     const now = new Date();
     document.querySelectorAll('.plan-countdown').forEach(el => {
         const t = el.getAttribute('data-time');
