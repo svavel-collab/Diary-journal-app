@@ -6,7 +6,7 @@ document.addEventListener('DOMContentLoaded', () => {
     const journalInput = document.getElementById('journalInput');
     const entriesList = document.getElementById('entriesList');
 
-    // Ladda befintliga inlägg vid start (exempel med localStorage)
+    // Ladda befintliga inlägg vid start
     loadEntries();
 
     // 1. Trigga filväljaren när man klickar på "Importera"
@@ -14,34 +14,44 @@ document.addEventListener('DOMContentLoaded', () => {
         importFile.click();
     });
 
-    // 2. Hantera filinläsningen
+    // 2. Robust hantering av filinläsningen
     importFile.addEventListener('change', (event) => {
         const file = event.target.files[0];
         if (!file) return;
 
         const reader = new FileReader();
         reader.onload = function(e) {
+            const content = e.target.result;
+            
+            // Kontrollera om filen faktiskt innehåller något
+            if (!content || content.trim() === "") {
+                alert("Den valda filen är tom.");
+                importFile.value = '';
+                return;
+            }
+
             try {
-                const importedData = JSON.parse(e.target.result);
+                const importedData = JSON.parse(content);
                 
-                // Validera att datan är en array eller ett objekt (justera efter din struktur)
-                if (!importedData) {
-                    throw new Error("Tom eller ogiltig fil.");
+                // Validera att datan är en array eller ett objekt
+                let entriesToSave = [];
+                if (Array.isArray(importedData)) {
+                    entriesToSave = importedData;
+                } else if (typeof importedData === 'object' && importedData !== null) {
+                    entriesToSave = importedData.entries || [importedData];
+                } else {
+                    throw new Error("Okänd JSON-struktur");
                 }
 
-                // Spara till localStorage (eller anpassa till din IndexedDB-logik)
-                localStorage.setItem('journal_entries', JSON.stringify(importedData));
-                
-                alert("Journalen har importerats utan problem!");
-                
-                // Uppdatera gränssnittet
+                localStorage.setItem('journal_entries', JSON.stringify(entriesToSave));
+                alert("Journalen har importerats framgångsrikt!");
                 loadEntries();
 
             } catch (error) {
-                console.error("Fel vid tolkning av JSON:", error);
-                alert("Kunde inte importera filen. Kontrollera att det är en giltig JSON-fil.");
+                console.error("Fel vid JSON-parsning:", error);
+                alert(`Kunde inte tolka filen som JSON.\nInnehållet börjar med: "${content.slice(0, 30)}..."`);
             } finally {
-                // Nollställ filväljaren så samma fil kan väljas igen om det behövs
+                // Nollställ filväljaren så samma fil kan väljas igen vid behov
                 importFile.value = '';
             }
         };
@@ -49,7 +59,7 @@ document.addEventListener('DOMContentLoaded', () => {
         reader.readAsText(file);
     });
 
-    // 3. Exportera-knapp (bra för att generera en fil att testa importen med)
+    // 3. Exportera-knapp
     exportBtn.addEventListener('click', () => {
         const data = localStorage.getItem('journal_entries') || '[]';
         const blob = new Blob([data], { type: 'application/json' });
@@ -63,7 +73,7 @@ document.addEventListener('DOMContentLoaded', () => {
         URL.revokeObjectURL(url);
     });
 
-    // 4. Exempel på Spara-knapp
+    // 4. Spara-knapp för nya inlägg
     saveBtn.addEventListener('click', () => {
         const text = journalInput.value.trim();
         if (!text) return;
@@ -90,16 +100,22 @@ document.addEventListener('DOMContentLoaded', () => {
         entries.forEach(entry => {
             const card = document.createElement('div');
             card.className = 'entry-card';
+            
+            // Hantera om inlägget är ett objekt eller en ren textsträng
+            const textContent = typeof entry === 'object' && entry !== null ? (entry.text || JSON.stringify(entry)) : entry;
+            const dateContent = entry.date ? new Date(entry.date).toLocaleString('sv-SE') : '';
+
             card.innerHTML = `
-                <p style="font-size: 0.85rem; color: #a78bfa; margin-bottom: 4px;">${new Date(entry.date || Date.now()).toLocaleString('sv-SE')}</p>
-                <p>${escapeHtml(entry.text || entry)}</p>
+                ${dateContent ? `<p style="font-size: 0.85rem; color: #a78bfa; margin-bottom: 4px;">${dateContent}</p>` : ''}
+                <p>${escapeHtml(textContent)}</p>
             `;
             entriesList.appendChild(card);
         });
     }
 
-    // Säkerhetsfunktion mot XSS om texten visas direkt
+    // Säkerhetsfunktion mot XSS
     function escapeHtml(str) {
+        if (typeof str !== 'string') str = String(str);
         return str.replace(/[&<>'"]/g, 
             tag => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', "'": '&#39;', '"': '&quot;' }[tag] || tag)
         );
