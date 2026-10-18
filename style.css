@@ -3,27 +3,20 @@
     --bg-elevated: #131316;
     --bg-card: #18181c;
     --bg-card-hover: #1f1f24;
-    
     --border-color: #2a2a32;
     --border-highlight: #3d3d48;
-    
     --text-main: #f4f4f5;
     --text-secondary: #c4c4cc;
     --text-muted: #8b8b96;
-    
     --accent-primary: #7c9cff;
-    --accent-primary-hover: #6b8bf0;
     --accent-secondary: #a78bfa;
     --accent-danger: #f87171;
-    
     --glow-primary: rgba(124, 156, 255, 0.18);
     --glow-secondary: rgba(167, 139, 250, 0.15);
-    
     --radius-sm: 10px;
     --radius-md: 14px;
     --radius-lg: 18px;
-    
-    --font-body: 'Inter', system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+    --font-body: 'Inter', system-ui, -apple-system, sans-serif;
 }
 
 * {
@@ -53,7 +46,6 @@ body {
     max-width: 620px;
 }
 
-/* ─── HEADER ─── */
 header {
     display: flex;
     justify-content: space-between;
@@ -78,7 +70,6 @@ h1 {
     background: linear-gradient(135deg, #ffffff 0%, var(--text-muted) 100%);
     -webkit-background-clip: text;
     -webkit-text-fill-color: transparent;
-    background-clip: text;
     display: flex;
     align-items: center;
     gap: 10px;
@@ -144,14 +135,8 @@ h1 {
 
 .fab-btn:hover {
     transform: scale(1.08) rotate(90deg);
-    box-shadow: 0 6px 26px rgba(124, 156, 255, 0.45);
 }
 
-.fab-btn:active {
-    transform: scale(0.95);
-}
-
-/* ─── FILTER & SÖK ─── */
 .filter-container {
     display: flex;
     gap: 8px;
@@ -168,21 +153,12 @@ h1 {
     font-size: 0.82rem;
     font-weight: 500;
     cursor: pointer;
-    transition: all 0.2s ease;
-    white-space: nowrap;
-}
-
-.filter-chip:hover {
-    background: var(--bg-card-hover);
-    border-color: var(--border-highlight);
-    color: var(--text-secondary);
 }
 
 .filter-chip.active {
     background: var(--glow-primary);
     color: var(--accent-primary);
     border-color: var(--accent-primary);
-    box-shadow: 0 0 0 1px var(--accent-primary);
 }
 
 .search-wrapper {
@@ -198,13 +174,6 @@ h1 {
     background: var(--bg-card);
     color: var(--text-main);
     font-size: 0.95rem;
-    transition: all 0.2s ease;
-}
-
-.search-wrapper input:focus {
-    border-color: var(--accent-primary);
-    outline: none;
-    box-shadow: 0 0 0 3px var(--glow-primary);
 }
 
 .clear-search {
@@ -218,32 +187,18 @@ h1 {
     cursor: pointer;
     font-size: 1.15rem;
     padding: 6px 10px;
-    border-radius: 8px;
 }
 
-.clear-search:hover {
-    color: var(--text-main);
-    background: rgba(255, 255, 255, 0.06);
-}
-
-/* ─── CARDS & FORMS ─── */
 .card {
     background: var(--bg-card);
     border: 1px solid var(--border-color);
     border-radius: var(--radius-lg);
     padding: 22px;
     margin-bottom: 20px;
-    box-shadow: 0 4px 18px rgba(0, 0, 0, 0.28);
 }
 
 .form-card {
     box-shadow: 0 12px 40px rgba(0, 0, 0, 0.5);
-    animation: slideDown 0.28s ease-out;
-}
-
-@keyframes slideDown {
-    from { opacity: 0; transform: translateY(-14px); }
-    to { opacity: 1; transform: translateY(0); }
 }
 
 label {
@@ -253,7 +208,6 @@ label {
     color: var(--text-muted);
     margin-bottom: 7px;
     margin-top: 18px;
-    letter-spacing: 0.01em;
 }
 
 label:first-of-type {
@@ -268,7 +222,6 @@ input, textarea {
     background: var(--bg-elevated);
     color: var(--text-main);
     font-size: 0.95rem;
-    transition: all 0.2s ease;
     margin-bottom: 4px;
 }
 
@@ -276,16 +229,13 @@ input:focus, textarea:focus {
     border-color: var(--accent-primary);
     outline: none;
     box-shadow: 0 0 0 3px var(--glow-primary);
-    background: var(--bg-card);
 }
 
 textarea {
     resize: vertical;
     min-height: 110px;
-    line-height: 1.5;
 }
 
-/* ─── BUTTONS ─── */
 button {
     padding: 11px 20px;
     border-radius: var(--radius-sm);
@@ -295,21 +245,10 @@ button {
     cursor: pointer;
     font-size: 0.9rem;
     font-weight: 500;
-    transition: all 0.2s ease;
-    user-select: none;
     display: inline-flex;
     align-items: center;
     justify-content: center;
     gap: 6px;
-}
-
-button:hover {
-    background: var(--bg-card-hover);
-    border-color: var(--border-highlight);
-}
-
-button:active {
-    transform: scale(0.97);
 }
 
 .btn-primary {
@@ -317,34 +256,16 @@ button:active {
     border: none;
     color: white;
     font-weight: 600;
-    box-shadow: 0 4px 14px rgba(124, 156, 255, 0.3);
-}
-
-.btn-primary:hover {
-    box-shadow: 0 6px 20px rgba(124, 156, 255, 0.4);
-    filter: brightness(1.05);
 }
 
 .btn-secondary {
     background: rgba(255, 255, 255, 0.04);
-    border: 1px solid var(--border-color);
 }
 
 .btn-danger {
     background: rgba(248, 113, 113, 0.08);
     border: 1px solid rgba(248, 113, 113, 0.25);
     color: var(--accent-danger);
-}
-
-.btn-danger:hover {
-    background: rgba(248, 113, 113, 0.15);
-    border-color: rgba(248, 113, 113, 0.4);
-}
-
-.full-width {
-    width: 100%;
-    justify-content: center;
-    margin-top: 8px;
 }
 
 .form-actions {
@@ -357,7 +278,6 @@ button:active {
     flex: 1;
 }
 
-/* ─── POST & PLAN CARDS ─── */
 .post-card, .plan-item {
     background: var(--bg-card);
     border: 1px solid var(--border-color);
@@ -366,18 +286,6 @@ button:active {
     padding: 20px;
     margin-bottom: 14px;
     cursor: pointer;
-    transition: all 0.22s ease;
-}
-
-.post-card:hover, .plan-item:hover {
-    background: var(--bg-card-hover);
-    border-color: var(--border-highlight);
-    transform: translateY(-3px);
-    box-shadow: 0 10px 28px rgba(0, 0, 0, 0.32);
-}
-
-.post-card:active, .plan-item:active {
-    transform: scale(0.99);
 }
 
 .plan-item {
@@ -406,7 +314,6 @@ button:active {
 .plan-date-month {
     font-size: 0.72rem;
     text-transform: uppercase;
-    letter-spacing: 0.9px;
     color: var(--accent-secondary);
     margin-top: 2px;
 }
@@ -415,21 +322,13 @@ button:active {
     font-size: 0.82rem;
     color: var(--accent-secondary);
     font-weight: 600;
-    text-transform: uppercase;
-    letter-spacing: 0.03em;
 }
 
 .plan-countdown {
     font-size: 0.78rem;
-    font-family: 'SF Mono', 'Fira Code', monospace;
-    min-width: 110px;
-    display: inline-block;
-    text-align: left;
+    font-family: monospace;
     margin-left: 8px;
     color: var(--accent-secondary);
-    vertical-align: middle;
-    font-weight: 500;
-    letter-spacing: 0.3px;
 }
 
 .plan-delete-btn {
@@ -441,22 +340,9 @@ button:active {
     border-radius: 8px;
     width: 30px;
     height: 30px;
-    display: flex;
-    align-items: center;
-    justify-content: center;
     color: var(--text-muted);
-    cursor: pointer;
-    z-index: 2;
-    transition: all 0.2s;
 }
 
-.plan-delete-btn:hover {
-    background: rgba(248, 113, 113, 0.12);
-    border-color: rgba(248, 113, 113, 0.35);
-    color: var(--accent-danger);
-}
-
-/* ─── IMAGES & TAGS ─── */
 .preview-grid, .post-images {
     display: flex;
     gap: 10px;
@@ -470,11 +356,6 @@ button:active {
     object-fit: cover;
     border-radius: var(--radius-sm);
     border: 1px solid var(--border-color);
-    transition: transform 0.2s ease;
-}
-
-.preview-grid img:hover, .post-images img:hover {
-    transform: scale(1.05);
 }
 
 .post-tag {
@@ -484,13 +365,11 @@ button:active {
     padding: 4px 11px;
     border-radius: 8px;
     font-size: 0.75rem;
-    font-weight: 500;
     display: inline-block;
     margin-right: 6px;
     margin-top: 10px;
 }
 
-/* ─── MODALS ─── */
 .modal-overlay {
     position: fixed;
     top: 0;
@@ -499,19 +378,12 @@ button:active {
     height: 100%;
     background: rgba(8, 8, 12, 0.88);
     backdrop-filter: blur(8px);
-    -webkit-backdrop-filter: blur(8px);
     z-index: 1000;
     display: flex;
     justify-content: center;
-    align-items: flex-start;
+    align-items: center;
     padding: 24px;
     overflow-y: auto;
-    animation: fadeIn 0.2s ease;
-}
-
-@keyframes fadeIn {
-    from { opacity: 0; }
-    to { opacity: 1; }
 }
 
 .modal-content {
@@ -521,14 +393,6 @@ button:active {
     border: 1px solid var(--border-color);
     border-radius: var(--radius-lg);
     padding: 24px;
-    margin-top: 20px;
-    box-shadow: 0 16px 48px rgba(0, 0, 0, 0.55);
-    animation: scaleIn 0.25s ease;
-}
-
-@keyframes scaleIn {
-    from { opacity: 0; transform: scale(0.96) translateY(10px); }
-    to { opacity: 1; transform: scale(1) translateY(0); }
 }
 
 .modal-header {
@@ -540,122 +404,11 @@ button:active {
     border-bottom: 1px solid var(--border-color);
 }
 
-.settings-section {
-    margin-bottom: 32px;
-}
-
-.settings-section h3 {
-    font-size: 1rem;
-    font-weight: 600;
-    margin-bottom: 14px;
-    color: var(--text-secondary);
-    border-bottom: 1px solid var(--border-color);
-    padding-bottom: 8px;
-}
-
-/* ─── LIGHTBOX ─── */
-.lightbox {
-    position: fixed;
-    top: 0;
-    left: 0;
-    width: 100%;
-    height: 100%;
-    background: rgba(5, 5, 8, 0.96);
-    backdrop-filter: blur(14px);
-    z-index: 2000;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    padding: 20px;
-}
-
-.lightbox img {
-    max-width: 100%;
-    max-height: 82vh;
-    object-fit: contain;
-    border-radius: var(--radius-md);
-    box-shadow: 0 12px 48px rgba(0, 0, 0, 0.6);
-}
-
-.lightbox-btn {
-    position: absolute;
-    background: rgba(255, 255, 255, 0.08);
-    border: 1px solid rgba(255, 255, 255, 0.12);
-    color: white;
-    padding: 12px 16px;
-    border-radius: var(--radius-sm);
-    font-size: 1.25rem;
-    cursor: pointer;
-    transition: background 0.2s;
-}
-
-.lightbox-btn:hover {
-    background: rgba(255, 255, 255, 0.16);
-}
-
-#lightbox-close { top: 24px; right: 24px; }
-#lightbox-prev { left: 20px; top: 50%; transform: translateY(-50%); }
-#lightbox-next { right: 20px; top: 50%; transform: translateY(-50%); }
-
-.hidden {
-    display: none !important;
-}
-
-/* ─── RESPONSIVE ─── */
-@media (max-width: 480px) {
-    body {
-        padding: 12px;
-    }
-    
-    header {
-        padding: 12px 14px;
-        margin-bottom: 20px;
-    }
-    
-    h1 {
-        font-size: 1.15rem;
-    }
-    
-    #header-date {
-        font-size: 0.8rem;
-    }
-    
-    .header-actions {
-        gap: 6px;
-    }
-    
-    .icon-btn {
-        width: 38px;
-        height: 38px;
-        font-size: 1.05rem;
-    }
-    
-    .fab-btn {
-        width: 40px;
-        height: 40px;
-        font-size: 22px;
-    }
-    
-    .post-card, .plan-item {
-        padding: 16px;
-    }
-    
-    .modal-content {
-        padding: 18px;
-        margin-top: 12px;
-    }
-}
-/* ─── SETTINGS MODAL (MATCHING BILD 2) ─── */
-.modal-overlay {
-    align-items: center; /* Centrerar modalen vertikalt precis som i bild 2 */
-}
-
 .settings-card {
     background: #110e18;
     border: 1px solid #231b32;
     border-radius: 24px;
     padding: 28px 24px;
-    box-shadow: 0 20px 50px rgba(0, 0, 0, 0.7);
 }
 
 .settings-title {
@@ -668,7 +421,6 @@ button:active {
 .settings-subtitle {
     color: #9ca3af;
     font-size: 0.88rem;
-    line-height: 1.4;
     margin-bottom: 24px;
 }
 
@@ -679,22 +431,14 @@ button:active {
 }
 
 .btn-purple {
-    background: linear-gradient(135deg, #a855f7 0%, #7e22ce 100%);
+    background: linear-gradient(135deg, #a855f7, #7e22ce);
     color: #ffffff;
     border: none;
     padding: 14px 20px;
     border-radius: 14px;
-    font-size: 0.95rem;
     font-weight: 600;
     cursor: pointer;
-    box-shadow: 0 4px 20px rgba(168, 85, 247, 0.35);
-    transition: all 0.2s ease;
     width: 100%;
-}
-
-.btn-purple:hover {
-    box-shadow: 0 6px 24px rgba(168, 85, 247, 0.5);
-    filter: brightness(1.1);
 }
 
 .btn-dark-outline {
@@ -703,14 +447,47 @@ button:active {
     border: 1px solid #2e2444;
     padding: 14px 20px;
     border-radius: 14px;
-    font-size: 0.95rem;
     font-weight: 600;
     cursor: pointer;
-    transition: all 0.2s ease;
     width: 100%;
 }
 
-.btn-dark-outline:hover {
-    background: #1f1a30;
-    border-color: #443563;
+.lightbox {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background: rgba(5, 5, 8, 0.96);
+    z-index: 2000;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 20px;
+}
+
+.lightbox img {
+    max-width: 100%;
+    max-height: 82vh;
+    object-fit: contain;
+    border-radius: var(--radius-md);
+}
+
+.lightbox-btn {
+    position: absolute;
+    background: rgba(255, 255, 255, 0.08);
+    border: 1px solid rgba(255, 255, 255, 0.12);
+    color: white;
+    padding: 12px 16px;
+    border-radius: var(--radius-sm);
+    font-size: 1.25rem;
+    cursor: pointer;
+}
+
+#lightbox-close { top: 24px; right: 24px; }
+#lightbox-prev { left: 20px; top: 50%; transform: translateY(-50%); }
+#lightbox-next { right: 20px; top: 50%; transform: translateY(-50%); }
+
+.hidden {
+    display: none !important;
 }
