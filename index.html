@@ -3,105 +3,35 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Digital Journal</title>
-    <link rel="preconnect" href="https://fonts.googleapis.com">
-    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
-    <!-- Supabase JS Client -->
-    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
-    <link rel="stylesheet" href="style.css?v=2.0">
-    <link rel="manifest" href="manifest.json">
-    <link rel="icon" type="image/png" href="ikon.png">
-    <link rel="apple-touch-icon" href="ikon.png">
+    <title>Journal</title>
+    <link rel="stylesheet" href="style.css">
 </head>
 <body>
-
-<div class="app-container">
-    <header>
-        <h1 id="view-title">Journal <span id="header-date"></span></h1>
-        <div class="header-actions">
-            <button type="button" id="home-btn" class="icon-btn active" title="Journal">📖</button>
-            <button type="button" id="calendar-btn" class="icon-btn" title="Planering">📅</button>
-            <button type="button" id="new-post-trigger" class="fab-btn">+</button>
-            <button type="button" id="new-plan-trigger" class="fab-btn hidden">+</button>
-        </div>
-    </header>
-
-    <main>
-        <!-- JOURNAL -->
-        <div id="journal-view">
-            <div id="filter-tags-container" class="filter-container"></div>
-            <div class="search-wrapper">
-                <input type="text" id="search-input" placeholder="🔍 Sök bland inlägg...">
-                <button type="button" id="clear-search-btn" class="clear-search hidden">✕</button>
+    <div class="app-container">
+        <header class="app-header">
+            <h1>Journal</h1>
+            <div class="action-buttons">
+                <!-- Tillfällig import och export -->
+                <button id="exportBtn" class="action-btn">Exportera</button>
+                <button id="importBtn" class="action-btn">Importera</button>
+                <input type="file" id="importFile" accept=".json" style="display: none;" />
             </div>
+        </header>
 
-            <section class="card form-card hidden" id="form-section">
-                <form id="journal-form">
-                    <input type="hidden" id="post-id">
-                    <label>Rubrik</label>
-                    <input id="post-title" type="text" placeholder="Vad tänker du på?" required>
-                    <label>Datum</label>
-                    <input id="post-date" type="date" required>
-                    <label>Taggar</label>
-                    <input id="post-tags" type="text" placeholder="Separera med kommatecken">
-                    <label>Innehåll</label>
-                    <textarea id="post-content" placeholder="Skriv dina tankar..." rows="4" required></textarea>
-                    <label>Bilder (max 6)</label>
-                    <input type="file" id="post-images" accept="image/*" multiple>
-                    <div id="image-preview-container" class="preview-grid"></div>
-                    <div class="form-actions">
-                        <button type="submit" class="btn-primary">Spara inlägg</button>
-                        <button type="button" id="cancel-btn" class="btn-secondary">Avbryt</button>
-                    </div>
-                </form>
+        <main class="app-main">
+            <!-- Din befintliga antecknings- eller journalvy -->
+            <section class="editor-section">
+                <textarea id="journalInput" placeholder="Skriv dina tankar här..."></textarea>
+                <button id="saveBtn" class="primary-btn">Spara Inlägg</button>
             </section>
-            <div id="posts-container"></div>
-        </div>
 
-        <!-- PLANERING -->
-        <div id="plan-view" class="hidden">
-            <section class="card form-card hidden" id="plan-form-section">
-                <form id="plan-form">
-                    <input type="hidden" id="plan-id">
-                    <label>Datum</label>
-                    <input id="plan-date" type="date" required>
-                    <label>Tid</label>
-                    <input id="plan-time" type="time" required>
-                    <label>Händelse</label>
-                    <input id="plan-title" type="text" placeholder="Vad ska hända?" required>
-                    <label>Extra info</label>
-                    <input id="plan-extra" type="text" placeholder="Adress, person, etc.">
-                    <div class="form-actions">
-                        <button type="submit" class="btn-primary">Spara händelse</button>
-                        <button type="button" id="plan-cancel-btn" class="btn-secondary">Avbryt</button>
-                    </div>
-                </form>
+            <section class="entries-section">
+                <h2>Tidigare inlägg</h2>
+                <div id="entriesList"></div>
             </section>
-            <div id="plans-container"></div>
-        </div>
-    </main>
-</div>
-
-<!-- POST MODAL -->
-<div id="post-modal" class="modal-overlay hidden">
-    <div class="modal-content">
-        <div class="modal-header">
-            <button type="button" id="delete-modal-btn" class="btn-danger">Radera</button>
-            <button type="button" id="close-modal" class="btn-secondary">Stäng</button>
-        </div>
-        <div id="modal-content-container"></div>
+        </main>
     </div>
-</div>
 
-<!-- LIGHTBOX -->
-<div id="lightbox" class="lightbox hidden">
-    <button type="button" id="lightbox-close" class="lightbox-btn">✕</button>
-    <button type="button" id="lightbox-prev" class="lightbox-btn">❮</button>
-    <img id="lightbox-img" src="" alt="Bild">
-    <button type="button" id="lightbox-next" class="lightbox-btn">❯</button>
-</div>
-
-<script src="app.js?v=2.0"></script>
+    <script src="app.js"></script>
 </body>
 </html>
