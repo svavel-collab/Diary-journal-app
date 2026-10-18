@@ -19,20 +19,25 @@ document.addEventListener('DOMContentLoaded', async () => {
 });
 
 function sortPostsDescending(arr) {
-    return arr.sort((a, b) => new Date(b.date) - new Date(a.date) || String(b.id).localeCompare(String(a.id)));
+    return arr.sort((a, b) => new Date(b.date) - new Date(a.date) || String(b.id).localeCompare(String(b.id)));
 }
 
 async function loadInitialData() {
     try {
-        // Hämta inlägg från Supabase
         const { data: postsData, error: postsError } = await db.from('posts').select('*');
-        if (postsError) throw postsError;
+        if (postsError) {
+            console.error('Posts Error:', postsError);
+            alert('Kunde inte läsa inlägg från molnet: ' + postsError.message);
+            throw postsError;
+        }
         posts = postsData || [];
         sortPostsDescending(posts);
 
-        // Hämta planerade händelser från Supabase
         const { data: plansData, error: plansError } = await db.from('plans').select('*');
-        if (plansError) throw plansError;
+        if (plansError) {
+            console.error('Plans Error:', plansError);
+            throw plansError;
+        }
         plans = plansData || [];
         plans.sort((a,b) => new Date(`${a.date}T${a.time}`) - new Date(`${b.date}T${b.time}`));
 
@@ -45,14 +50,17 @@ async function loadInitialData() {
 
 function updateHeaderDate() {
     const el = document.getElementById('header-date');
-    if (el) { const d = new Date(); el.textContent = `${d.getDate()}${d.toLocaleString('sv-SE',{month:'short'}).replace('.','')}`; }
+    if (el) { const d = new Date(); el.textContent = `${d.getDate()} ${d.toLocaleString('sv-SE',{month:'short'}).replace('.','')}`; }
 }
 
 function setDefaultDates() {
     const today = new Date().toISOString().split('T')[0];
-    document.getElementById('post-date').value = today;
-    document.getElementById('plan-date').value = today;
-    document.getElementById('plan-time').value = '12:00';
+    const pDate = document.getElementById('post-date');
+    const plDate = document.getElementById('plan-date');
+    const plTime = document.getElementById('plan-time');
+    if (pDate) pDate.value = today;
+    if (plDate) plDate.value = today;
+    if (plTime) plTime.value = '12:00';
 }
 
 function escapeHtml(s) { return s ? String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;') : ''; }
@@ -96,10 +104,13 @@ function setupEventListeners() {
     document.getElementById('lightbox-close').onclick = () => document.getElementById('lightbox').classList.add('hidden');
     document.getElementById('lightbox-prev').onclick = () => navigateLightbox(-1);
     document.getElementById('lightbox-next').onclick = () => navigateLightbox(1);
-    document.getElementById('search-input').oninput = function() {
-        document.getElementById('clear-search-btn').classList.toggle('hidden', !this.value);
-        renderPosts();
-    };
+    const searchInput = document.getElementById('search-input');
+    if (searchInput) {
+        searchInput.oninput = function() {
+            document.getElementById('clear-search-btn').classList.toggle('hidden', !this.value);
+            renderPosts();
+        };
+    }
     document.getElementById('clear-search-btn').onclick = () => {
         document.getElementById('search-input').value = '';
         document.getElementById('clear-search-btn').classList.add('hidden');
@@ -145,7 +156,7 @@ async function handleSavePost(e) {
     const { error } = await db.from('posts').upsert(postData);
     if (error) {
         console.error('Fel vid sparande till Supabase:', error);
-        alert('Kunde inte spara inlägget till molnet.');
+        alert('Kunde inte spara inlägget till molnet: ' + error.message);
         return;
     }
 
@@ -164,10 +175,12 @@ function resetJournalForm() {
 
 function renderPosts() {
     const c = document.getElementById('posts-container');
+    if (!c) return;
     c.innerHTML = '';
     renderFilterChips();
     sortPostsDescending(posts);
-    const search = document.getElementById('search-input').value.toLowerCase().trim();
+    const searchEl = document.getElementById('search-input');
+    const search = searchEl ? searchEl.value.toLowerCase().trim() : '';
     const filtered = posts.filter(p => {
         if (currentFilter !== 'all' && (!p.tags || !p.tags.map(t=>t.toLowerCase()).includes(currentFilter.toLowerCase()))) return false;
         if (search && !p.title.toLowerCase().includes(search) && !p.content.toLowerCase().includes(search) && (!p.tags || !p.tags.some(t=>t.toLowerCase().includes(search)))) return false;
@@ -179,7 +192,8 @@ function renderPosts() {
         card.className = 'post-card';
         card.innerHTML = `
             <div style="display:flex;justify-content:space-between;"><h3>${escapeHtml(p.title)}</h3><span style="font-size:0.75rem;color:var(--text-muted)">${p.date}</span></div>
-            <p style="display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden;">${escapeHtml(p.content)}</p>${p.images && p.images.length ? `<div class="post-images">${p.images.map(img => `<img src="${img}">`).join('')}</div>` : ''}
+            <p style="display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden;">${escapeHtml(p.content)}</p>
+            ${p.images && p.images.length ? `<div class="post-images">${p.images.map(img => `<img src="${img}">`).join('')}</div>` : ''}
             <div>${p.tags ? p.tags.map(t => `<span class="post-tag">#${t}</span>`).join('') : ''}</div>
         `;
         card.onclick = () => openPostModal(p);
@@ -189,6 +203,7 @@ function renderPosts() {
 
 function renderFilterChips() {
     const c = document.getElementById('filter-tags-container');
+    if (!c) return;
     c.innerHTML = '';
     const all = document.createElement('button'); all.className = `filter-chip ${currentFilter==='all'?'active':''}`; all.textContent='Alla'; all.onclick=()=>{currentFilter='all';renderPosts();}; c.appendChild(all);
     const set = new Set(); posts.forEach(p => p.tags && p.tags.forEach(t => set.add(t.trim())));
@@ -202,7 +217,8 @@ function openPostModal(post) {
     const imgsJson = JSON.stringify(post.images || []).replace(/"/g,'&quot;');
     document.getElementById('modal-content-container').innerHTML = `
         <div style="display:flex;justify-content:space-between;"><h2>${escapeHtml(post.title)}</h2><span style="font-size:0.8rem;color:var(--text-muted)">${post.date}</span></div>
-        <p style="white-space:pre-wrap;">${escapeHtml(post.content)}</p>${post.images && post.images.length ? `<div class="post-images">${post.images.map((img,i) => `<img src="${img}" onclick="event.stopPropagation();openLightbox(${imgsJson},${i})">`).join('')}</div>` : ''}
+        <p style="white-space:pre-wrap;">${escapeHtml(post.content)}</p>
+        ${post.images && post.images.length ? `<div class="post-images">${post.images.map((img,i) => `<img src="${img}" onclick="event.stopPropagation();openLightbox(${imgsJson},${i})">`).join('')}</div>` : ''}
         <div style="margin-top:20px;text-align:right"><button type="button" onclick="editPost('${post.id}')" class="btn-primary">Redigera</button></div>
     `;
     document.getElementById('post-modal').classList.remove('hidden');
@@ -225,7 +241,7 @@ async function deletePost(id) {
     if (confirm('Radera inlägg?')) {
         const { error } = await db.from('posts').delete().eq('id', id);
         if (error) {
-            alert('Kunde inte radera inlägget.');
+            alert('Kunde inte radera inlägget: ' + error.message);
             return;
         }
         await loadInitialData();
@@ -248,7 +264,7 @@ async function handleSavePlan(e) {
     const { error } = await db.from('plans').upsert(planData);
     if (error) {
         console.error('Fel vid sparande av händelse:', error);
-        alert('Kunde inte spara händelsen till molnet.');
+        alert('Kunde inte spara händelsen till molnet: ' + error.message);
         return;
     }
 
@@ -261,6 +277,7 @@ function resetPlanForm() { document.getElementById('plan-form').reset(); documen
 
 function renderPlans() {
     const c = document.getElementById('plans-container');
+    if (!c) return;
     c.innerHTML = '';
     if (!plans.length) { c.innerHTML = '<p style="text-align:center;color:var(--text-muted);padding:20px;">Inga händelser</p>'; return; }
     const now = new Date();
@@ -274,7 +291,7 @@ function renderPlans() {
         if (diff > 0) {
             const days = Math.floor(diff/86400000), hrs = Math.floor((diff%86400000)/3600000), mins = Math.floor((diff%3600000)/60000), secs = Math.floor((diff%60000)/1000);
             const pad = n => String(n).padStart(2,'0');
-            cd = days>0 ? `${days}d${pad(hrs)}:${pad(mins)}:${pad(secs)}` : `${pad(hrs)}:${pad(mins)}:${pad(secs)}`;
+            cd = days>0 ? `${days}d ${pad(hrs)}:${pad(mins)}:${pad(secs)}` : `${pad(hrs)}:${pad(mins)}:${pad(secs)}`;
         }
         const item = document.createElement('div');
         item.className = 'plan-item';
@@ -282,4 +299,62 @@ function renderPlans() {
         item.innerHTML = `
             <div class="plan-date-box"><div class="plan-date-day">${day}</div><div class="plan-date-month">${month}</div></div>
             <div class="plan-details">
-                <div><span class="plan-time">${plan.time}</span> <span class="plan
+                <div><span class="plan-time">${plan.time}</span> <span class="plan-countdown" data-time="${plan.date}T${plan.time}">${cd}</span></div>
+                <h3>${escapeHtml(plan.title)}</h3>${plan.extra ? `<p>${escapeHtml(plan.extra)}</p>` : ''}
+            </div>
+            <button type="button" class="plan-delete-btn" onclick="event.stopPropagation();deletePlan('${plan.id}')">✕</button>
+        `;
+        item.onclick = () => editPlan(plan.id);
+        c.appendChild(item);
+    });
+}
+
+window.editPlan = id => {
+    const p = plans.find(x => x.id===id); if (!p) return;
+    document.getElementById('plan-form-section').classList.remove('hidden');
+    document.getElementById('plan-id').value = p.id;
+    document.getElementById('plan-date').value = p.date;
+    document.getElementById('plan-time').value = p.time;
+    document.getElementById('plan-title').value = p.title;
+    document.getElementById('plan-extra').value = p.extra || '';
+    document.getElementById('plan-form-section').scrollIntoView({behavior:'smooth'});
+};
+
+window.deletePlan = async id => {
+    if (confirm('Radera händelse?')) {
+        const { error } = await db.from('plans').delete().eq('id', id);
+        if (error) {
+            alert('Kunde inte radera händelsen: ' + error.message);
+            return;
+        }
+        await loadInitialData();
+        renderPlans();
+    }
+};
+
+function updateCountdowns() {
+    if (document.getElementById('plan-view').classList.contains('hidden')) return;
+    const now = new Date();
+    document.querySelectorAll('.plan-countdown').forEach(el => {
+        const t = el.getAttribute('data-time');
+        if (!t) return;
+        const target = new Date(t);
+        const diff = target - now;
+        if (diff <= 0) {
+            el.textContent = 'Passerat';
+            el.style.color = 'var(--text-muted)';
+            const item = el.closest('.plan-item');
+            if (item) item.style.opacity = '0.5';
+        } else {
+            const days = Math.floor(diff/86400000), hrs = Math.floor((diff%86400000)/3600000), mins = Math.floor((diff%3600000)/60000), secs = Math.floor((diff%60000)/1000);
+            const pad = n => String(n).padStart(2,'0');
+            el.textContent = days>0 ? `${days}d ${pad(hrs)}:${pad(mins)}:${pad(secs)}` : `${pad(hrs)}:${pad(mins)}:${pad(secs)}`;
+            el.style.color = '#8b5cf6';
+        }
+    });
+}
+
+// ========== LIGHTBOX ==========
+window.openLightbox = (imgs, idx) => { lightboxImages = imgs; lightboxCurrentIndex = idx; updateLightbox(); document.getElementById('lightbox').classList.remove('hidden'); };
+function updateLightbox() { document.getElementById('lightbox-img').src = lightboxImages[lightboxCurrentIndex]; }
+function navigateLightbox(dir) { lightboxCurrentIndex = (lightboxCurrentIndex + dir + lightboxImages.length) % lightboxImages.length; updateLightbox(); }
