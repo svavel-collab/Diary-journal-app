@@ -1,11 +1,22 @@
-// EXPORTERA ALLA INLÄGG OCH PLANER FRÅN INDEXEDDB
+'use strict';
+
+function showStatus(text, showSpinner = true) {
+    document.getElementById('status-text').textContent = text;
+    document.getElementById('status-spinner').style.display = showSpinner ? 'block' : 'none';
+    document.getElementById('status-modal').classList.remove('hidden');
+}
+
+function hideStatus() {
+    document.getElementById('status-modal').classList.add('hidden');
+}
+
+// EXPORT JSON (Journal_ååmmdd.json)
 document.getElementById('export-btn').addEventListener('click', async () => {
     try {
         const db = window.db;
-        if (!db) {
-            alert('Databasen är inte redo ännu. Vänta ett ögonblick och försök igen.');
-            return;
-        }
+        if (!db) { alert('Databasen är inte redo.'); return; }
+
+        showStatus('Exporterar data...', true);
 
         const allPosts = await db.posts.toArray();
         const allPlans = await db.plans.toArray();
@@ -21,92 +32,96 @@ document.getElementById('export-btn').addEventListener('click', async () => {
         const url = URL.createObjectURL(blob);
 
         const now = new Date();
-        const year = now.getFullYear();
+        const year = String(now.getFullYear()).slice(-2);
         const month = String(now.getMonth() + 1).padStart(2, '0');
         const day = String(now.getDate()).padStart(2, '0');
-        const fileName = `jour_${year}${month}${day}.json`;
+        const fileName = `Journal_${year}${month}${day}.json`;
 
-        const downloadAnchor = document.createElement('a');
-        downloadAnchor.href = url;
-        downloadAnchor.download = fileName;
-        document.body.appendChild(downloadAnchor);
-        downloadAnchor.click();
-        downloadAnchor.remove();
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = fileName;
+        document.body.appendChild(a);
+        a.click();
+        a.remove();
         URL.revokeObjectURL(url);
+
+        setTimeout(() => {
+            hideStatus();
+            alert('Export klar!');
+        }, 600);
     } catch (err) {
-        console.error('Fel vid export:', err);
+        hideStatus();
+        console.error('Exportfel:', err);
         alert('Kunde inte exportera data.');
     }
 });
 
-// IMPORTERA TILL INDEXEDDB
-const importFileInput = document.getElementById('import-file');
-if (importFileInput) {
-    importFileInput.addEventListener('change', (e) => {
-        const file = e.target.files[0];
-        if (!file) return;
+// IMPORT JSON
+document.getElementById('import-btn').addEventListener('click', () => {
+    document.getElementById('import-file').click();
+});
 
-        const reader = new FileReader();
-        
-        reader.onload = async (event) => {
-            try {
-                const db = window.db;
-                if (!db) {
-                    throw new Error("Databasen hittades inte.");
+document.getElementById('import-file').addEventListener('change', (e) => {
+    const file = e.target.files[0];
+    if (!file) return;
+
+    if (!confirm('Detta ersätter eller fyller på din nuvarande databas. Vill du fortsätta?')) {
+        e.target.value = '';
+        return;
+    }
+
+    showStatus('Läser in och importerar fil...', true);
+
+    const reader = new FileReader();
+    reader.onload = async (event) => {
+        try {
+            const db = window.db;
+            if (!db) throw new Error("Databasen hittades inte.");
+
+            let content = event.target.result;
+            if (content.charCodeAt(0) === 0xFEFF) content = content.slice(1);
+
+            const data = JSON.parse(content);
+            if (!data.posts && !data.plans) throw new Error("Filen saknar giltig data.");
+
+            await db.transaction('rw', db.posts, db.plans, async () => {
+                if (data.posts && Array.isArray(data.posts)) {
+                    await db.posts.bulkPut(data.posts);
                 }
-
-                let content = event.target.result;
-                if (content.charCodeAt(0) === 0xFEFF) {
-                    content = content.slice(1);
+                if (data.plans && Array.isArray(data.plans)) {
+                    await db.plans.bulkPut(data.plans);
                 }
+            });
 
-                const importedData = JSON.parse(content);
-
-                if (!importedData.posts && !importedData.plans) {
-                    throw new Error("Filen saknar giltig journaldata (posts/plans).");
-                }
-
-                await db.transaction('rw', db.posts, db.plans, async () => {
-                    if (importedData.posts && Array.isArray(importedData.posts)) {
-                        await db.posts.bulkPut(importedData.posts);
-                    }
-                    if (importedData.plans && Array.isArray(importedData.plans)) {
-                        await db.plans.bulkPut(importedData.plans);
-                    }
-                });
-
+            setTimeout(() => {
+                hideStatus();
                 alert('Importen lyckades!');
                 location.reload();
-            } catch (err) {
-                console.error('Detaljerat importfel:', err);
-                alert(`Kunde inte läsa filen: ${err.message}`);
-            }
-        };
+            }, 800);
+        } catch (err) {
+            hideStatus();
+            console.error('Importfel:', err);
+            alert(`Kunde inte läsa filen: ${err.message}`);
+        }
+    };
 
-        reader.onerror = (err) => {
-            console.error('FileReader fel:', err);
-            alert('Kunde inte läsa filen från din enhet.');
-        };
+    reader.onerror = () => {
+        hideStatus();
+        alert('Kunde inte läsa filen från enheten.');
+    };
 
-        reader.readAsText(file, 'UTF-8');
-    });
-}
+    reader.readAsText(file, 'UTF-8');
+});
 
 // INSTÄLLNINGAR MODAL
 const settingsModal = document.getElementById('settings-modal');
-const settingsTrigger = document.getElementById('settings-trigger');
+const settingsBtn = document.getElementById('settings-btn');
 const closeSettings = document.getElementById('close-settings');
 
-if (settingsTrigger && settingsModal && closeSettings) {
-    settingsTrigger.addEventListener('click', () => {
-        settingsModal.classList.remove('hidden');
-    });
-    closeSettings.addEventListener('click', () => {
-        settingsModal.classList.add('hidden');
-    });
+if (settingsModal && settingsBtn) {
+    settingsBtn.addEventListener('click', () => settingsModal.classList.remove('hidden'));
+    closeSettings.addEventListener('click', () => settingsModal.classList.add('hidden'));
     settingsModal.addEventListener('click', (e) => {
-        if (e.target === settingsModal) {
-            settingsModal.classList.add('hidden');
-        }
+        if (e.target === settingsModal) settingsModal.classList.add('hidden');
     });
 }
