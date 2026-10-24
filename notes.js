@@ -12,7 +12,7 @@ document.addEventListener('DOMContentLoaded', async () => {
 });
 
 function sortNotes() {
-    notes.sort((a, b) => String(b.id).localeCompare(String(id => id)));
+    notes.sort((a, b) => String(b.id).localeCompare(String(a.id)));
 }
 
 function setupNoteEvents() {
@@ -40,10 +40,9 @@ async function handleSaveNote(e) {
     const date = now.toLocaleDateString('sv-SE');
     const time = now.toLocaleTimeString('sv-SE', { hour: '2-digit', minute: '2-digit' });
 
-    // Spara i Dexie-databasen permanent
     await db.notes.put({ id, title, content, date, time });
     notes = await db.notes.toArray();
-    notes.sort((a, b) => String(b.id).localeCompare(String(a.id)));
+    sortNotes();
 
     document.getElementById('notes-form-section').classList.add('hidden');
     resetNoteForm();
@@ -61,7 +60,7 @@ function renderNotes() {
     const c = document.getElementById('notes-container');
     if (!c) return;
     c.innerHTML = '';
-    notes.sort((a, b) => String(b.id).localeCompare(String(a.id)));
+    sortNotes();
 
     if (!notes.length) {
         c.innerHTML = '<p style="text-align:center;color:var(--text-muted);padding:20px;">Inga anteckningar sparade.</p>';
@@ -92,6 +91,7 @@ window.deleteNoteDirect = async function(e, id) {
     if (confirm('Radera anteckningen?')) {
         await db.notes.delete(id);
         notes = await db.notes.toArray();
+        sortNotes();
         renderNotes();
     }
 };
