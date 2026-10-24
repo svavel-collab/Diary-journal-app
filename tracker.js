@@ -89,6 +89,13 @@ function resetSoberForm() {
     setDefaultSoberDateTime();
 }
 
+function getBadgeInfo(days) {
+    if (days >= 30) return { text: '🏆 Milstolpe (30d+)', color: 'rgba(234, 179, 8, 0.15)', border: 'rgba(234, 179, 8, 0.35)', textColor: '#facc15' };
+    if (days >= 7) return { text: '⭐ Över 1 vecka', color: 'rgba(52, 211, 153, 0.15)', border: 'rgba(52, 211, 153, 0.35)', textColor: '#34d399' };
+    if (days >= 1) return { text: '🔥 På gång', color: 'rgba(248, 113, 113, 0.15)', border: 'rgba(248, 113, 113, 0.35)', textColor: '#f87171' };
+    return { text: '🌱 Startad', color: 'rgba(192, 132, 252, 0.15)', border: 'rgba(192, 132, 252, 0.3)', textColor: 'var(--accent-secondary)' };
+}
+
 function renderSober() {
     const c = document.getElementById('sober-container');
     if (!c) return;
@@ -105,14 +112,17 @@ function renderSober() {
         const start = new Date(item.startDate).getTime();
         const diff = now - start;
 
-        let timeStr = 'Nyss startad';
+        let days = 0;
+        let timeStr = '0d 0h 0m 0s';
         if (diff > 0) {
-            const days = Math.floor(diff / (1000 * 60 * 60 * 24));
+            days = Math.floor(diff / (1000 * 60 * 60 * 24));
             const hrs = Math.floor((diff / (1000 * 60 * 60)) % 24);
             const mins = Math.floor((diff / (1000 * 60)) % 60);
             const secs = Math.floor((diff / 1000) % 60);
             timeStr = `${days}d ${hrs}h ${mins}m ${secs}s`;
         }
+
+        const badge = getBadgeInfo(days);
 
         const dateObj = new Date(item.startDate);
         const dayNum = dateObj.getDate();
@@ -126,8 +136,15 @@ function renderSober() {
                 <span class="sober-mon">${monStr}</span>
             </div>
             <div class="sober-info">
-                <div class="sober-title">${escapeHtml(item.name)}</div>
                 <div class="sober-timer">${timeStr}</div>
+                <div class="sober-title">${escapeHtml(item.name)}</div>
+                <div class="sober-bottom-row">
+                    <span class="sober-status-badge" style="background:${badge.color};border-color:${badge.border};color:${badge.textColor};">${badge.text}</span>
+                </div>
+            </div>
+            <div class="sober-right-group">
+                <button type="button" class="sober-action-btn" title="Ändra tid" onclick="event.stopPropagation(); editSober('${item.id}')">⏱</button>
+                <button type="button" class="card-delete-btn" title="Radera" onclick="event.stopPropagation(); deleteSoberDirect('${item.id}')">✕</button>
             </div>
         `;
         card.onclick = () => openSoberModal(item);
@@ -135,9 +152,26 @@ function renderSober() {
     });
 }
 
+window.editSober = id => {
+    const item = soberItems.find(x => x.id === id);
+    if (item) openSoberModal(item);
+};
+
+window.deleteSoberDirect = async function(id) {
+    if (confirm('Radera denna spårning?')) {
+        await db.sober.delete(id);
+        soberItems = await db.sober.toArray();
+        renderSober();
+    }
+};
+
 function openSoberModal(item) {
     currentModalSoberId = item.id;
-    document.getElementById('edit-sober-start').value = item.startDate;
+    const now = new Date();
+    const pad = n => String(n).padStart(2, '0');
+    const localIso = `${now.getFullYear()}-${pad(now.getMonth()+1)}-${pad(now.getDate())}T${pad(now.getHours())}:${pad(now.getMinutes())}`;
+    
+    document.getElementById('edit-sober-start').value = localIso;
     document.getElementById('sober-modal').classList.remove('hidden');
 }
 

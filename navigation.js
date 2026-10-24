@@ -35,7 +35,15 @@ document.addEventListener('DOMContentLoaded', () => {
         if (active.key === 'journal' && typeof resetJournalForm === 'function') resetJournalForm();
         if (active.key === 'plans' && typeof resetPlanForm === 'function') resetPlanForm();
         if (active.key === 'notes' && typeof resetNoteForm === 'function') resetNoteForm();
-        if (active.key === 'sober' && typeof resetSoberForm === 'function') resetSoberForm();
+        if (active.key === 'sober') {
+            if (typeof resetSoberForm === 'function') resetSoberForm();
+            // Tvinga fram aktuell tid i fältet när formuläret öppnas
+            const now = new Date();
+            const pad = n => String(n).padStart(2, '0');
+            const localIso = `${now.getFullYear()}-${pad(now.getMonth()+1)}-${pad(now.getDate())}T${pad(now.getHours())}:${pad(now.getMinutes())}`;
+            const soberStartInput = document.getElementById('sober-start');
+            if (soberStartInput) soberStartInput.value = localIso;
+        }
 
         active.form.classList.toggle('hidden');
     };

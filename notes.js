@@ -12,7 +12,7 @@ document.addEventListener('DOMContentLoaded', async () => {
 });
 
 function sortNotes() {
-    notes.sort((a, b) => String(b.id).localeCompare(String(a.id)));
+    notes.sort((a, b) => String(b.id).localeCompare(String(id => id)));
 }
 
 function setupNoteEvents() {
@@ -40,9 +40,10 @@ async function handleSaveNote(e) {
     const date = now.toLocaleDateString('sv-SE');
     const time = now.toLocaleTimeString('sv-SE', { hour: '2-digit', minute: '2-digit' });
 
+    // Spara i Dexie-databasen permanent
     await db.notes.put({ id, title, content, date, time });
     notes = await db.notes.toArray();
-    sortNotes();
+    notes.sort((a, b) => String(b.id).localeCompare(String(a.id)));
 
     document.getElementById('notes-form-section').classList.add('hidden');
     resetNoteForm();
@@ -60,7 +61,7 @@ function renderNotes() {
     const c = document.getElementById('notes-container');
     if (!c) return;
     c.innerHTML = '';
-    sortNotes();
+    notes.sort((a, b) => String(b.id).localeCompare(String(a.id)));
 
     if (!notes.length) {
         c.innerHTML = '<p style="text-align:center;color:var(--text-muted);padding:20px;">Inga anteckningar sparade.</p>';
@@ -71,7 +72,6 @@ function renderNotes() {
         const item = document.createElement('div');
         item.className = 'note-card';
 
-        // Klick på kortet öppnar redigering direkt
         item.innerHTML = `
             <div class="note-card-content">
                 <div class="note-card-title">${escapeHtml(n.title)}</div>
@@ -92,7 +92,6 @@ window.deleteNoteDirect = async function(e, id) {
     if (confirm('Radera anteckningen?')) {
         await db.notes.delete(id);
         notes = await db.notes.toArray();
-        sortNotes();
         renderNotes();
     }
 };
@@ -105,10 +104,3 @@ window.editNote = id => {
     document.getElementById('note-title').value = n.title;
     document.getElementById('note-content').value = n.content;
 };
-
-async function deleteNote(id) {
-    await db.notes.delete(id);
-    notes = await db.notes.toArray();
-    sortNotes();
-    renderNotes();
-}
