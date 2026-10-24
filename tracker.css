@@ -1,0 +1,103 @@
+/* SOBER / TRACKER CARD DESIGN */
+.sober-card {
+    background: var(--bg-card);
+    border: 1px solid var(--border-color);
+    border-left: 3px solid var(--accent-secondary);
+    border-radius: var(--radius-lg);
+    padding: 14px 18px;
+    margin-bottom: 12px;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    gap: 14px;
+    transition: background 0.2s;
+}
+
+.sober-card:hover {
+    background: var(--bg-card-hover);
+}
+
+.sober-date-badge {
+    background: var(--bg-elevated);
+    border: 1px solid var(--border-color);
+    border-radius: 12px;
+    width: 48px;
+    height: 48px;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    flex-shrink: 0;
+}
+
+.sober-day {
+    font-size: 1.05rem;
+    font-weight: 700;
+    color: var(--text-main);
+    line-height: 1;
+}
+
+.sober-mon {
+    font-size: 0.6rem;
+    font-weight: 600;
+    color: var(--text-muted);
+    text-transform: uppercase;
+    margin-top: 2px;
+}
+
+.sober-info {
+    flex-grow: 1;
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    min-width: 0;
+}
+
+.sober-title {
+    font-size: 1.05rem;
+    font-weight: 600;
+    color: var(--text-main);
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+.sober-status-badge {
+    font-size: 0.75rem;
+    color: var(--accent-secondary);
+    font-weight: 500;
+    margin-top: 2px;
+}
+
+.sober-right-group {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    flex-shrink: 0;
+}
+
+.sober-timer {
+    font-family: monospace;
+    font-size: 0.82rem;
+    font-weight: 600;
+    color: var(--digital-green);
+}
+
+.sober-action-btn {
+    width: 30px;
+    height: 30px;
+    font-size: 0.7rem;
+    background: rgba(255, 255, 255, 0.03);
+    border: 1px solid var(--border-color);
+    border-radius: 50%;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    color: var(--text-muted);
+}
+
+.sober-action-btn:hover {
+    color: var(--text-main);
+    background: var(--bg-card-hover);
+}

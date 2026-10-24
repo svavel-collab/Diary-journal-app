@@ -1,0 +1,214 @@
+<!DOCTYPE html>
+<html lang="sv">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Digital Journal</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <script src="https://unpkg.com/dexie/dist/dexie.js"></script>
+    <link rel="stylesheet" href="style.css">
+    <link rel="manifest" href="manifest.json">
+    <link rel="icon" type="image/png" href="ikon.png">
+    <link rel="apple-touch-icon" href="ikon.png">
+</head>
+<body>
+
+<div class="app-container">
+    <!-- Fast 2-radig Header -->
+    <header class="app-header">
+        <div class="header-row-1">
+            <h1 id="view-title">Journal <span id="header-date"></span></h1>
+            <div class="header-actions">
+                <button type="button" id="settings-btn" class="icon-btn" title="Inställningar">⚙️</button>
+                <button type="button" id="global-fab" class="fab-btn">+</button>
+            </div>
+        </div>
+        <div class="header-row-2">
+            <nav class="tab-nav">
+                <button type="button" id="nav-journal" class="tab-btn active" title="Journal">📖</button>
+                <button type="button" id="nav-plans" class="tab-btn" title="Plans">📅</button>
+                <button type="button" id="nav-notes" class="tab-btn" title="Notes">📝</button>
+                <button type="button" id="nav-sober" class="tab-btn" title="Tracker">⏳</button>
+            </nav>
+        </div>
+    </header>
+
+    <main>
+        <!-- JOURNAL VYN -->
+        <div id="journal-view">
+            <div class="search-wrapper">
+                <input type="text" id="search-input" placeholder="🔍 Sök bland inlägg...">
+                <button type="button" id="clear-search-btn" class="clear-search hidden">✕</button>
+            </div>
+
+            <section class="card form-card hidden" id="form-section">
+                <form id="journal-form">
+                    <input type="hidden" id="post-id">
+                    <label>Rubrik</label>
+                    <input id="post-title" type="text" placeholder="Vad tänker du på?" required>
+                    <label>Datum</label>
+                    <input id="post-date" type="date" required>
+                    <label>Taggar</label>
+                    <input id="post-tags" type="text" placeholder="Separera med kommatecken">
+                    <label>Innehåll</label>
+                    <textarea id="post-content" placeholder="Skriv dina tankar..." rows="4" required></textarea>
+                    <label>Bilder (max 5, komprimeras automatiskt)</label>
+                    <input type="file" id="post-images" accept="image/*" multiple>
+                    <div id="image-preview-container" class="preview-grid"></div>
+                    <div class="form-actions">
+                        <button type="submit" class="btn-primary">Spara inlägg</button>
+                        <button type="button" id="cancel-btn" class="btn-secondary">Avbryt</button>
+                    </div>
+                </form>
+            </section>
+            <div id="posts-container"></div>
+        </div>
+
+        <!-- PLANS VYN -->
+        <div id="plan-view" class="hidden">
+            <section class="card form-card hidden" id="plan-form-section">
+                <form id="plan-form">
+                    <input type="hidden" id="plan-id">
+                    <label>Datum</label>
+                    <input id="plan-date" type="date" required>
+                    <label>Tid</label>
+                    <input id="plan-time" type="time" required>
+                    <label>Plats / Händelse</label>
+                    <input id="plan-title" type="text" placeholder="Vad ska hända eller var?" required>
+                    <label>Extra info / Adress</label>
+                    <input id="plan-extra" type="text" placeholder="Detaljer, adress etc...">
+                    <div class="form-actions">
+                        <button type="submit" class="btn-primary">Spara händelse</button>
+                        <button type="button" id="plan-cancel-btn" class="btn-secondary">Avbryt</button>
+                    </div>
+                </form>
+            </section>
+            <div id="plans-container"></div>
+        </div>
+
+        <!-- NOTES VYN -->
+        <div id="notes-view" class="hidden">
+            <section class="card form-card hidden" id="notes-form-section">
+                <form id="notes-form">
+                    <input type="hidden" id="note-id">
+                    <label>Rubrik</label>
+                    <input id="note-title" type="text" placeholder="Anteckningens rubrik..." required>
+                    <label>Innehåll</label>
+                    <textarea id="note-content" placeholder="Skriv din anteckning..." rows="5" required></textarea>
+                    <div class="form-actions">
+                        <button type="submit" class="btn-primary">Spara anteckning</button>
+                        <button type="button" id="note-cancel-btn" class="btn-secondary">Avbryt</button>
+                    </div>
+                </form>
+            </section>
+            <div id="notes-container"></div>
+        </div>
+
+        <!-- TRACKER VYN (SOBER) -->
+        <div id="sober-view" class="hidden">
+            <section class="card form-card hidden" id="sober-form-section">
+                <form id="sober-form">
+                    <input type="hidden" id="sober-id">
+                    <label>Namn (t.ex. Amfetamin)</label>
+                    <input id="sober-name" type="text" placeholder="Vad vill du spåra?" required>
+                    <label>Startdatum & Tid</label>
+                    <input id="sober-start" type="datetime-local" required>
+                    <div class="form-actions">
+                        <button type="submit" class="btn-primary">Spara spårning</button>
+                        <button type="button" id="sober-cancel-btn" class="btn-secondary">Avbryt</button>
+                    </div>
+                </form>
+            </section>
+            <div id="sober-container"></div>
+        </div>
+    </main>
+</div>
+
+<!-- MODALS & LIGHTBOX -->
+<div id="post-modal" class="modal-overlay hidden">
+    <div class="modal-content">
+        <div class="modal-header">
+            <button type="button" id="delete-modal-btn" class="btn-danger">Radera</button>
+            <button type="button" id="close-modal" class="btn-secondary">Stäng</button>
+        </div>
+        <div id="modal-content-container"></div>
+    </div>
+</div>
+
+<div id="plan-modal" class="modal-overlay hidden">
+    <div class="modal-content">
+        <div class="modal-header">
+            <button type="button" id="delete-plan-modal-btn" class="btn-danger">Radera</button>
+            <button type="button" id="close-plan-modal" class="btn-secondary">Stäng</button>
+        </div>
+        <div id="plan-modal-content-container"></div>
+    </div>
+</div>
+
+<div id="note-modal" class="modal-overlay hidden">
+    <div class="modal-content">
+        <div class="modal-header">
+            <button type="button" id="delete-note-modal-btn" class="btn-danger">Radera</button>
+            <button type="button" id="close-note-modal" class="btn-secondary">Stäng</button>
+        </div>
+        <div id="note-modal-content-container"></div>
+    </div>
+</div>
+
+<!-- SOBER MODAL (UTAN HISTORIK/TIDIGARE NOLLSTÄLLNINGAR) -->
+<div id="sober-modal" class="modal-overlay hidden">
+    <div class="modal-content">
+        <div class="modal-header">
+            <h2 id="sober-modal-title" style="font-size:1.1rem; color:var(--text-main);">Hantera spårning</h2>
+            <button type="button" id="close-sober-modal" class="btn-secondary">Stäng</button>
+        </div>
+        <div id="sober-modal-content-container">
+            <label>Ändra startdatum & tid</label>
+            <input type="datetime-local" id="edit-sober-start" style="margin-bottom:12px;">
+            <div style="display:flex; gap:10px;">
+                <button type="button" id="update-sober-start-btn" class="btn-primary" style="flex:1;">Uppdatera starttid</button>
+                <button type="button" id="delete-sober-btn" class="btn-danger">Radera</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div id="settings-modal" class="modal-overlay hidden">
+    <div class="modal-content settings-card">
+        <h2 class="settings-title">Inställningar &amp; Data</h2>
+        <p class="settings-subtitle">Exportera eller importera din säkerhetskopia.</p>
+        <div class="settings-actions">
+            <button type="button" id="export-btn" class="btn-purple">Exportera JSON</button>
+            <button type="button" id="import-btn" class="btn-dark-outline">Importera JSON</button>
+            <button type="button" id="close-settings" class="btn-dark-outline">Stäng</button>
+        </div>
+        <input type="file" id="import-file" accept=".json" class="hidden">
+    </div>
+</div>
+
+<div id="status-modal" class="modal-overlay hidden" style="background: rgba(0,0,0,0.9);">
+    <div class="modal-content" style="text-align:center; padding:30px;">
+        <div id="status-spinner" class="spinner"></div>
+        <p id="status-text" style="margin-top:15px; font-weight:600; color:var(--text-main);">Laddar...</p>
+    </div>
+</div>
+
+<div id="lightbox" class="lightbox hidden">
+    <button type="button" id="lightbox-close" class="lightbox-btn">✕</button>
+    <button type="button" id="lightbox-prev" class="lightbox-btn">❮</button>
+    <img id="lightbox-img" src="" alt="Bild">
+    <button type="button" id="lightbox-next" class="lightbox-btn">❯</button>
+</div>
+
+<!-- Skript -->
+<script src="db.js"></script>
+<script src="navigation.js"></script>
+<script src="posts.js"></script>
+<script src="plans.js"></script>
+<script src="notes.js"></script>
+<script src="tracker.js"></script>
+<script src="settings.js"></script>
+</body>
+</html>
