@@ -90,10 +90,18 @@ function resetSoberForm() {
 }
 
 function getBadgeInfo(days) {
-    if (days >= 30) return { text: '🏆 Milstolpe (30d+)', color: 'rgba(234, 179, 8, 0.15)', border: 'rgba(234, 179, 8, 0.35)', textColor: '#facc15' };
-    if (days >= 7) return { text: '⭐ Över 1 vecka', color: 'rgba(52, 211, 153, 0.15)', border: 'rgba(52, 211, 153, 0.35)', textColor: '#34d399' };
-    if (days >= 1) return { text: '🔥 På gång', color: 'rgba(248, 113, 113, 0.15)', border: 'rgba(248, 113, 113, 0.35)', textColor: '#f87171' };
-    return { text: '🌱 Startad', color: 'rgba(192, 132, 252, 0.15)', border: 'rgba(192, 132, 252, 0.3)', textColor: 'var(--accent-secondary)' };
+    if (days >= 30) return { text: '🌳 Träd (1 månad+)', color: 'rgba(34, 197, 94, 0.15)', border: 'rgba(34, 197, 94, 0.35)', textColor: '#4ade80' };
+    if (days >= 14) return { text: '🪴 Större planta (2 veckor)', color: 'rgba(52, 211, 153, 0.15)', border: 'rgba(52, 211, 153, 0.35)', textColor: '#34d399' };
+    if (days >= 7) return { text: '🪴 Planta (1 vecka)', color: 'rgba(74, 222, 128, 0.15)', border: 'rgba(74, 222, 128, 0.35)', textColor: '#86efac' };
+    
+    if (days === 6) return { text: '🌿 Grodd (dag 6)', color: 'rgba(192, 132, 252, 0.15)', border: 'rgba(192, 132, 252, 0.3)', textColor: '#c084fc' };
+    if (days === 5) return { text: '🌿 Grodd (dag 5)', color: 'rgba(192, 132, 252, 0.15)', border: 'rgba(192, 132, 252, 0.3)', textColor: '#c084fc' };
+    if (days === 4) return { text: '🌿 Grodd (dag 4)', color: 'rgba(192, 132, 252, 0.15)', border: 'rgba(192, 132, 252, 0.3)', textColor: '#c084fc' };
+    if (days === 3) return { text: '🌿 Grodd (dag 3)', color: 'rgba(192, 132, 252, 0.15)', border: 'rgba(192, 132, 252, 0.3)', textColor: '#c084fc' };
+    if (days === 2) return { text: '🌱 Grodd (dag 2)', color: 'rgba(192, 132, 252, 0.15)', border: 'rgba(192, 132, 252, 0.3)', textColor: '#c084fc' };
+    if (days === 1) return { text: '🌱 Liten grodd (dag 1)', color: 'rgba(192, 132, 252, 0.15)', border: 'rgba(192, 132, 252, 0.3)', textColor: '#c084fc' };
+    
+    return { text: '🌰 Frö (dag 0)', color: 'rgba(168, 162, 158, 0.15)', border: 'rgba(168, 162, 158, 0.3)', textColor: '#a8a29e' };
 }
 
 function renderSober() {
