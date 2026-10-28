@@ -1,47 +1,74 @@
 'use strict';
 
-let soberTrackers = [];
+let soberEntries = [];
 let currentModalSoberId = null;
 
 document.addEventListener('DOMContentLoaded', async () => {
-    setDefaultSoberDate();
     try {
-        soberTrackers = await db.sober.toArray();
+        if (window.db && typeof db.open === 'function') {
+            await db.open();
+        }
+        soberEntries = await db.sober.toArray();
+        sortSober();
         renderSober();
-    } catch (e) { console.error(e); }
+    } catch (e) { 
+        console.error('Kunde inte ladda sober-inlägg:', e);
+        renderSober(); 
+    }
     setupSoberEvents();
-    setInterval(updateSoberTimers, 1000);
 });
 
-function setDefaultSoberDate() {
-    const el = document.getElementById('sober-start');
-    if (el) {
-        const now = new Date();
-        now.setMinutes(now.getMinutes() - now.getTimezoneOffset());
-        el.value = now.toISOString().slice(0, 16);
+function sortSober() {
+    try {
+        soberEntries.sort((a, b) => {
+            const idA = String(a.id || '');
+            const idB = String(b.id || '');
+            return idB.localeCompare(idA);
+        });
+    } catch (e) {
+        console.error('Kunde inte sortera sober-inlägg:', e);
     }
 }
 
 function setupSoberEvents() {
-    document.getElementById('sober-cancel-btn').onclick = () => document.getElementById('sober-form-section').classList.add('hidden');
-    document.getElementById('sober-form').onsubmit = handleSaveSober;
-    document.getElementById('close-sober-history').onclick = () => document.getElementById('sober-history-modal').classList.add('hidden');
+    const cancelBtn = document.getElementById('sober-cancel-btn');
+    if (cancelBtn) cancelBtn.onclick = () => document.getElementById('sober-form-section').classList.add('hidden');
+    
+    const form = document.getElementById('sober-form');
+    if (form) form.onsubmit = handleSaveSober;
+
+    const closeModal = document.getElementById('close-sober-modal');
+    if (closeModal) closeModal.onclick = () => document.getElementById('sober-modal').classList.add('hidden');
+    
+    const deleteModalBtn = document.getElementById('delete-sober-modal-btn');
+    if (deleteModalBtn) {
+        deleteModalBtn.onclick = () => {
+            if (currentModalSoberId && confirm('Radera inlägget?')) {
+                deleteSober(currentModalSoberId);
+                document.getElementById('sober-modal').classList.add('hidden');
+            }
+        };
+    }
 }
 
 async function handleSaveSober(e) {
     e.preventDefault();
-    const id = document.getElementById('sober-id').value || 'sober_' + Date.now();
-    const name = document.getElementById('sober-name').value.trim();
-    const startDate = document.getElementById('sober-start').value;
+    const oldId = document.getElementById('sober-id').value;
+    const title = document.getElementById('sober-title').value.trim();
+    const content = document.getElementById('sober-content').value.trim();
+    const date = document.getElementById('sober-date').value;
 
-    if (!name || !startDate) return alert('Fyll i alla fält.');
+    if (!title || !date) return alert('Fyll i obligatoriska fält.');
 
-    // Hämta befintliga resets om vi redigerar
-    const existing = soberTrackers.find(x => x.id === id);
-    const resets = existing ? (existing.resets || []) : [];
+    const newId = 'sober_' + Date.now();
 
-    await db.sober.put({ id, name, startDate, resets });
-    soberTrackers = await db.sober.toArray();
+    if (oldId) {
+        await db.sober.delete(oldId);
+    }
+
+    await db.sober.put({ id: newId, title, content, date });
+    soberEntries = await db.sober.toArray();
+    sortSober();
 
     document.getElementById('sober-form-section').classList.add('hidden');
     resetSoberForm();
@@ -49,145 +76,80 @@ async function handleSaveSober(e) {
 }
 
 function resetSoberForm() {
-    document.getElementById('sober-form').reset();
-    document.getElementById('sober-id').value = '';
-    setDefaultSoberDate();
+    const form = document.getElementById('sober-form');
+    if (form) form.reset();
+    const idField = document.getElementById('sober-id');
+    if (idField) idField.value = '';
 }
 
 function renderSober() {
     const c = document.getElementById('sober-container');
     if (!c) return;
     c.innerHTML = '';
-    if (!soberTrackers.length) {
-        c.innerHTML = '<p style="text-align:center;color:var(--text-muted);padding:20px;">Inga spårningar aktiva.</p>';
-        return;
-    }
+    
+    try {
+        sortSober();
 
-    soberTrackers.forEach(t => {
-        const startObj = new Date(t.startDate);
-        const dayNum = startObj.getDate();
-        const monthStr = startObj.toLocaleDateString('sv-SE', { month: 'short' }).toUpperCase().replace('.', '');
-
-        const card = document.createElement('div');
-        card.className = 'sober-card';
-        card.innerHTML = `
-            <div class="sober-card-inner">
-                <div class="sober-date-badge">
-                    <span class="sober-day">${dayNum}</span>
-                    <span class="sober-mon">${monthStr}</span>
-                </div>
-                <div class="sober-info">
-                    <h3 class="sober-title">${escapeHtml(t.name)}</h3>
-                    <div class="sober-status-badge">🌱 Startad</div>
-                </div>
-                <div class="sober-right-group">
-                    <div class="sober-timer" data-start="${t.startDate}">0å 0m 0d 00:00:00</div>
-                    <button type="button" class="icon-btn sober-action-btn" title="Nollställ" onclick="resetSoberTimer(event, '${t.id}')">⏱️</button>
-                    <button type="button" class="card-delete sober-action-btn" title="Radera" onclick="deleteSoberTracker(event, '${t.id}')">✕</button>
-                </div>
-            </div>
-        `;
-        card.onclick = () => openSoberHistory(t);
-        c.appendChild(card);
-    });
-    updateSoberTimers();
-}
-
-function updateSoberTimers() {
-    if (document.getElementById('sober-view').classList.contains('hidden')) return;
-    const now = new Date().getTime();
-
-    document.querySelectorAll('.sober-timer').forEach(timer => {
-        const start = new Date(timer.getAttribute('data-start')).getTime();
-        const diff = now - start;
-        if (diff < 0) return;
-
-        const secs = Math.floor((diff / 1000) % 60);
-        const mins = Math.floor((diff / (1000 * 60)) % 60);
-        const hrs = Math.floor((diff / (1000 * 60 * 60)) % 24);
-        const daysTotal = Math.floor(diff / (1000 * 60 * 60 * 24));
-        const years = Math.floor(daysTotal / 365);
-        const months = Math.floor((daysTotal % 365) / 30);
-        const days = daysTotal % 30;
-
-        const pad = n => String(n).padStart(2, '0');
-        timer.textContent = `${years}å ${months}m ${days}d ${pad(hrs)}:${pad(mins)}:${pad(secs)}`;
-
-        const badgeEl = timer.closest('.sober-card').querySelector('.sober-status-badge');
-        if (badgeEl) {
-            if (daysTotal >= 1 && daysTotal <= 6) {
-                badgeEl.textContent = `✨ ${daysTotal} Dag${daysTotal > 1 ? 'ar' : ''}`;
-            } else if (daysTotal > 6) {
-                const weeks = Math.floor(daysTotal / 7);
-                badgeEl.textContent = `🏆 ${weeks} Vecka${weeks > 1 ? 'or' : ''}`;
-            } else {
-                badgeEl.textContent = `🌱 Startad`;
-            }
+        if (!soberEntries.length) {
+            c.innerHTML = '<p style="text-align:center;color:var(--text-muted);padding:20px;">Inga sober-inlägg hittades.</p>';
+            return;
         }
-    });
-}
 
-window.resetSoberTimer = async function(e, id) {
-    e.stopPropagation();
-    if (confirm('Vill du nollställa tidräknaren?')) {
-        const t = soberTrackers.find(x => x.id === id);
-        if (!t) return;
-        t.resets = t.resets || [];
-        t.resets.push({ date: new Date().toISOString(), previousStart: t.startDate });
-        t.startDate = new Date().toISOString();
-        await db.sober.put(t);
-        soberTrackers = await db.sober.toArray();
-        renderSober();
-    }
-};
+        soberEntries.forEach(s => {
+            const card = document.createElement('div');
+            card.className = 'post-card';
+            card.style.padding = '10px 14px';
 
-window.deleteSoberTracker = async function(e, id) {
-    e.stopPropagation();
-    if (confirm('Radera spårning?')) {
-        await db.sober.delete(id);
-        soberTrackers = await db.sober.toArray();
-        renderSober();
-    }
-};
-
-function openSoberHistory(t) {
-    document.getElementById('sober-history-title').textContent = `Spårning: ${t.name}`;
-    const c = document.getElementById('sober-history-container');
-    
-    // Formatera datum för datetime-local input
-    const localIso = new Date(new Date(t.startDate).getTime() - new Date(t.startDate).getTimezoneOffset() * 60000).toISOString().slice(0, 16);
-
-    c.innerHTML = `
-        <div class="card" style="margin-bottom:15px;">
-            <label style="margin-top:0;">Ändra startdatum & tid</label>
-            <input type="datetime-local" id="edit-sober-start" value="${localIso}" style="margin-top:6px; margin-bottom:12px;">
-            <button type="button" class="btn-primary" onclick="saveSoberEdit('${t.id}')" style="width:100%;">Uppdatera starttid</button>
-        </div>
-        <div style="font-weight:600; margin-bottom:8px; font-size:0.9rem; color:var(--text-muted);">Tidigare nollställningar</div>
-    `;
-
-    if (t.resets && t.resets.length > 0) {
-        t.resets.slice().reverse().forEach((r, idx) => {
-            c.innerHTML += `<div class="card" style="margin-bottom:8px; padding:12px;"><div style="font-size:0.85rem; color:var(--text-secondary);">Nollställning #${t.resets.length - idx}: ${new Date(r.date).toLocaleString('sv-SE')}</div></div>`;
+            card.innerHTML = `
+                <div class="post-header-row" style="display:flex;justify-content:space-between;align-items:center;gap:10px;margin-bottom:2px;">
+                    <div class="post-title" style="margin-bottom:0;">${escapeHtml(s.title)}</div>
+                    ${s.date ? `<div class="post-date-badge" style="background:rgba(16, 185, 129, 0.15);color:#34d399;padding:3px 8px;border-radius:6px;font-size:0.7rem;white-space:nowrap;border:1px solid rgba(52, 211, 153, 0.2);">${s.date}</div>` : ''}
+                </div>
+                ${s.content ? `<div class="post-preview-text" style="display:-webkit-box;-webkit-line-clamp:1;-webkit-box-orient:vertical;overflow:hidden;text-overflow:ellipsis;color:var(--text-secondary);font-size:0.85rem;margin-top:0;">${escapeHtml(s.content)}</div>` : ''}
+            `;
+            card.onclick = () => openSoberModal(s);
+            c.appendChild(card);
         });
-    } else {
-        c.innerHTML += `<p style="color:var(--text-muted); font-size:0.85rem; padding:10px 0;">Inga tidigare nollställningar.</p>`;
+    } catch (e) {
+        console.error('Kunde inte rendera sober-inlägg:', e);
+        c.innerHTML = '<p style="text-align:center;color:var(--text-muted);padding:20px;">Kunde inte visa inlägg.</p>';
     }
-    document.getElementById('sober-history-modal').classList.remove('hidden');
 }
 
-window.saveSoberEdit = async function(id) {
-    const newStart = document.getElementById('edit-sober-start').value;
-    if (!newStart) return alert청('Välj ett datum.');
+function openSoberModal(sober) {
+    currentModalSoberId = sober.id;
 
-    const t = soberTrackers.find(x => x.id === id);
-    if (!t) return;
+    document.getElementById('sober-modal-content-container').innerHTML = `
+        <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px;">
+            <h2 style="font-size:1.25rem;color:var(--text-main);">${escapeHtml(sober.title)}</h2>
+            ${sober.date ? `<span style="font-size:0.85rem;color:#34d399;">${sober.date}</span>` : ''}
+        </div>
+        ${sober.content ? `<p style="white-space:pre-wrap;color:var(--text-secondary);line-height:1.5;margin-bottom:16px;">${escapeHtml(sober.content)}</p>` : ''}
+        <div style="text-align:right"><button type="button" onclick="editSober('${sober.id}')" class="btn-primary">Redigera</button></div>
+    `;
+    const modal = document.getElementById('sober-modal');
+    if (modal) modal.classList.remove('hidden');
+}
 
-    t.startDate = new Date(newStart).toISOString();
-    await db.sober.put(t);
-    soberTrackers = await db.sober.toArray();
+window.editSober = id => {
+    const s = soberEntries.find(x => x.id === id);
+    if (!s) return;
+    const modal = document.getElementById('sober-modal');
+    if (modal) modal.classList.add('hidden');
+    const formSec = document.getElementById('sober-form-section');
+    if (formSec) formSec.classList.remove('hidden');
     
-    document.getElementById('sober-history-modal').classList.add('hidden');
-    renderSober();
-    alert('Starttid uppdaterad!');
+    document.getElementById('sober-id').value = s.id;
+    document.getElementById('sober-title').value = s.title;
+    if (document.getElementById('sober-content')) document.getElementById('sober-content').value = s.content || '';
+    if (document.getElementById('sober-date')) document.getElementById('sober-date').value = s.date || '';
 };
+
+async function deleteSober(id) {
+    await db.sober.delete(id);
+    soberEntries = await db.sober.toArray();
+    sortSober();
+    renderSober();
+}
+
+window.resetSoberForm = resetSoberForm;

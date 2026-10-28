@@ -80,30 +80,29 @@ button { padding: 10px 18px; border-radius: var(--radius-sm); border: 1px solid 
 .form-actions { display: flex; gap: 10px; margin-top: 18px; }
 .form-actions button { flex: 1; }
 
-/* NOTES & POSTS (Med mer luft och rätt struktur) */
-.note-card, .post-card {
+/* NOTES KORT (Tajtare med mindre padding och tightare avstånd mellan titel och text) */
+.note-card {
     background: var(--bg-card);
     border: 1px solid var(--border-color);
     border-left: 3px solid #c084fc;
-    border-radius: var(--radius-lg);
-    padding: 14px 18px;
-    margin-bottom: 12px;
+    border-radius: var(--radius-md);
+    padding: 10px 14px;
+    margin-bottom: 10px;
     cursor: pointer;
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-    gap: 16px;
-    transition: all 0.2s;
-    box-shadow: inset 4px 0 12px rgba(192, 132, 252, 0.08);
-}
-.note-card:hover, .post-card:hover { background: var(--bg-card-hover); border-color: #a855f7; }
-
-.note-card-content, .post-card-content {
-    flex: 1 1 auto;
-    min-width: 0;
     display: flex;
     flex-direction: column;
     justify-content: center;
+    gap: 3px;
+    transition: all 0.2s;
+    box-shadow: inset 4px 0 12px rgba(192, 132, 252, 0.08);
+}
+.note-card:hover { background: var(--bg-card-hover); border-color: #a855f7; }
+
+.note-card-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    gap: 12px;
 }
 .note-card-title, .post-title {
     font-size: 1rem;
@@ -115,50 +114,44 @@ button { padding: 10px 18px; border-radius: var(--radius-sm); border: 1px solid 
     text-overflow: ellipsis;
 }
 .note-card-preview, .post-preview-text {
-    font-size: 0.85rem;
+    font-size: 0.82rem;
     color: #c084fc;
     line-height: 1.3;
-    margin-top: 3px;
+    margin-top: 1px;
     white-space: nowrap;
     overflow: hidden;
     text-overflow: ellipsis;
 }
 
-.note-card-right, .post-card-right {
-    display: flex;
-    align-items: center;
-    gap: 12px;
-    flex-shrink: 0;
-}
 .note-time-badge, .post-date-badge {
     font-family: monospace;
-    font-size: 0.78rem;
+    font-size: 0.75rem;
     font-weight: 600;
     color: #34d399;
     background: rgba(52, 211, 153, 0.1);
     border: 1px solid rgba(52, 211, 153, 0.3);
-    padding: 3px 8px;
-    border-radius: 8px;
+    padding: 2px 7px;
+    border-radius: 6px;
     text-shadow: 0 0 8px rgba(52, 211, 153, 0.4);
+    flex-shrink: 0;
 }
-.card-delete-btn {
-    background: transparent;
-    border: none;
-    color: var(--text-muted);
-    font-size: 1rem;
-    cursor: pointer;
-    padding: 4px;
-    line-height: 1;
-}
-.card-delete-btn:hover { color: var(--accent-danger); }
 
-/* Journal specifikt (full vy) */
+/* POSTS (Journal) */
 .post-card {
+    background: var(--bg-card);
+    border: 1px solid var(--border-color);
+    border-left: 3px solid #c084fc;
+    border-radius: var(--radius-lg);
+    padding: 16px 18px;
+    margin-bottom: 12px;
+    cursor: pointer;
+    display: flex;
     flex-direction: column;
     align-items: stretch;
-    padding: 18px;
-    margin-bottom: 14px;
+    transition: all 0.2s;
+    box-shadow: inset 4px 0 12px rgba(192, 132, 252, 0.08);
 }
+.post-card:hover { background: var(--bg-card-hover); border-color: #a855f7; }
 .post-header-row {
     display: flex;
     justify-content: space-between;
@@ -282,3 +275,12 @@ button { padding: 10px 18px; border-radius: var(--radius-sm); border: 1px solid 
 .spinner { width: 38px; height: 38px; border: 4px solid rgba(192, 132, 252, 0.2); border-top-color: var(--accent-secondary); border-radius: 50%; animation: spin 0.8s linear infinite; margin: 0 auto; }
 @keyframes spin { to { transform: rotate(360deg); } }
 .hidden { display: none !important; }
+
+/* Kalender- och tid-ikoner (stora och ljusa) */
+input[type="date"]::-webkit-calendar-picker-indicator,
+input[type="datetime-local"]::-webkit-calendar-picker-indicator,
+input[type="time"]::-webkit-calendar-picker-indicator {
+    cursor: pointer;
+    transform: scale(1.4);
+    filter: invert(1) brightness(1.2);
+}
